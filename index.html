@@ -3,15 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>User</th>
-                                <th>Model</th>
-                                <th>Requests</th>
-                                <th>Quota Status</th>
-                            </tr>
-                        </thead>e>GitHub Copilot Usage Metrics Viewer</title>
+    <title>GitHub Copilot Usage Metrics Viewer</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
@@ -246,6 +238,14 @@
     <div id="model-distribution-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
+            <div id="modelDistributionDetails">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
             <div id="modelDistributionDetails">
             </div>
         </div>
