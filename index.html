@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Model</th>
+                                <th>Requests</th>
+                                <th>Quota Status</th>
+                            </tr>
+                        </thead>e>GitHub Copilot Usage Metrics Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1> GitHub Copilot Usage Metrics Viewer</h1>
+            <p>Analyze your GitHub Copilot usage patterns and trends</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-card">
+                <i class="fas fa-upload"></i>
+                <h3>Upload Your Data</h3>
+                <p>Upload your CSV file to analyze GitHub Copilot usage metrics.</p>
+                <p>All data stays in your browser.</p>
+                <input type="file" id="csvFileInput" accept=".csv" class="file-input">
+                <label for="csvFileInput" class="upload-btn">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose CSV File
+                </label>
+                <button id="loadSampleData" class="sample-btn">
+                    <i class="fas fa-chart-line"></i> Load Sample Data
+                </button>
+            </div>
+        </div>
+
+        <div id="dashboard" class="dashboard" style="display: none;">
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="dateRange">Date Range:</label>
+                    <select id="dateRange">
+                        <option value="all">All Time</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="userFilter">User:</label>
+                    <select id="userFilter">
+                        <option value="all">All Users</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="modelFilter">Model:</label>
+                    <select id="modelFilter">
+                        <option value="all">All Models</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card clickable" data-modal="users-modal">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalUsers">0</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalRequests">0</h3>
+                        <p>Total Requests</p>
+                    </div>
+                </div>
+                <div class="stat-card clickable" data-modal="models-modal">
+                    <div class="stat-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalModels">0</h3>
+                        <p>Models Used</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="avgRequestsPerUser">0</h3>
+                        <p>Avg Requests/User</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="dailyAverage">0</h3>
+                        <p>Daily Average Requests</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Requests Over Time</h3>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="chart-card clickable" data-modal="model-distribution-modal">
+                    <h3>Model Usage Distribution</h3>
+                    <canvas id="modelChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Model Usage Bar Chart</h3>
+                    <canvas id="modelBarChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Top Users by Requests</h3>
+                    <canvas id="userChart"></canvas>
+                </div>
+                <div class="chart-card chart-card-large">
+                    <h3>Model Trends Over Time (Last 30 Days)</h3>
+                    <canvas id="modelTrendsChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Day of Week Usage</h3>
+                    <canvas id="dayOfWeekChart"></canvas>
+                </div>
+            </div>
+
+            <div class="data-table-section">
+                <h3>Raw Data</h3>
+                <div class="table-controls">
+                    <input type="text" id="searchInput" placeholder="Search data...">
+                    <button id="exportBtn"><i class="fas fa-download"></i> Export Filtered Data</button>
+                </div>
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Model</th>
+                                <th>Requests</th>
+                                <th>Exceeds Monthly Quota</th>
+                                <th>Total Monthly Quota</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Windows -->
+        <div id="models-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Models Usage Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="modelsDetailTable">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Total Requests</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modelsDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="model-distribution-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Model Distribution Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="modelDistributionDetails">
+                        <p>Click on a model segment in the chart to see user details for that model.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Models Modal -->
+    <div id="models-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Model Usage Details</h3>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Requests</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody id="modelsDetailTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Users Modal -->
+    <div id="users-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>User Activity Details</h3>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Requests</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody id="usersDetailTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Model Distribution Modal -->
+    <div id="model-distribution-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modelDistributionDetails">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
