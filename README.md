@@ -1,161 +1,109 @@
 # GitHub Copilot Usage Metrics Viewer
+📊 Interactive dashboard for visualising GitHub Copilot Premium requests usage metrics and analytics
 
-A modern, interactive web application for visualizing GitHub Copilot usage metrics. Built with vanilla JavaScript, Chart.js, and modern CSS, this tool provides comprehensive analytics for your Copilot usage data while keeping all data processing in the browser for privacy.
+A web-based dashboard that provides insights into GitHub Copilot Premium requests usage patterns, model distribution, user activity, and hourly trends. Built as a single-page application with no external dependencies.
 
-## Features
+🚀 Ready to use in seconds! Just open in your browser - no installation, no setup, no server required. All data processing happens locally for complete privacy.
 
-### 📊 Interactive Dashboard
-- **Stat Cards**: Key metrics at a glance (total users, requests, models, averages)
-- **Timeline Chart**: Requests over time with trend visualization
-- **Model Distribution**: Pie chart showing usage by AI model
-- **Top Users**: Bar chart of most active users
-- **Hourly Patterns**: Usage patterns throughout the day
+<img alt="GitHub Copilot Dashboard" src="https://img.shields.io/badge/GitHub-Copilot-blue?style=for-the-badge&amp;logo=github">
 
-### 🔍 Advanced Filtering
-- Date range filtering (7 days, 30 days, 90 days, all time)
-- User-specific filtering
-- Model-specific filtering
-- Real-time search in data table
+<img alt="HTML5" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white">
 
-### 🔒 Privacy First
-- All data processing happens in your browser
-- No data is sent to external servers
-- Upload your own CSV files securely
-- Export filtered data as needed
+<img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&amp;logo=javascript&amp;logoColor=black">
 
-### 📱 Responsive Design
-- Modern, gradient-based UI
-- Mobile-friendly responsive layout
-- Smooth animations and transitions
-- Professional stat cards and charts
+<img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-F5788D?style=for-the-badge&amp;logo=chart.js&amp;logoColor=white">
 
-## Setup Instructions
+---
 
-### 1. Repository Setup
-1. Create a new GitHub repository
-2. Upload all files to your repository
-3. Ensure your CSV data file is named `data_example.csv` (or update the filename in `script.js`)
+## ✨ Features
+- 🔒 **Privacy-First**: All data processing happens locally in your browser - no external transmission
+- ⚡ **Zero Setup**: Just open in any modern browser - no installation or configuration required
+- 📊 **Overview Analytics**: Total users, requests, model distribution, and top users etc
+- 🔍 **Advanced Analytics**: Hourly usage patterns, filtering by date, user, or model
+- 💡 **Insights Dashboard**: Interactive charts, real-time search, and exportable filtered data
 
-### 2. Enable GitHub Pages
-1. Go to your repository Settings
-2. Navigate to "Pages" in the left sidebar
-3. Under "Source", select "GitHub Actions"
-4. The workflow will automatically deploy your site
+### Dashboard Preview
 
-### 3. CSV Data Format
-Your CSV file should have the following columns:
-```csv
-Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-2025-06-18T10:43:41.8378480Z,User41,gpt-4o-2024-11-20,1,FALSE,Unlimited
-```
+![Dashboard Screenshot](screenshots/screenshot1.png)
 
-Required columns:
-- `Timestamp`: ISO 8601 formatted timestamp
-- `User`: User identifier
-- `Model`: AI model name
-- `Requests Used`: Number of requests (integer)
-- `Exceeds Monthly Quota`: TRUE/FALSE
-- `Total Monthly Quota`: Quota limit information
+![Dashboard Screenshot](screenshots/screenshot2.png)
 
-## Usage
+---
 
-### Loading Data
-1. **Upload File**: Click "Choose CSV File" to upload your own data
-2. **Load Sample**: Click "Load Sample Data" to use the included dataset
-3. The dashboard will automatically appear once data is loaded
+## 🚀 Getting Started
 
-### Exploring Data
-- Use the filter dropdowns to focus on specific time periods, users, or models
-- Hover over charts for detailed information
-- Search the data table for specific entries
-- Export filtered data using the export button
+### Option 1: GitHub Pages (Recommended)
+✨ Instant access: Deploy the dashboard to GitHub Pages and access it at: `https://[username].github.io/[repository-name]/`
 
-### Sharing
-- Your deployed GitHub Pages URL will be: `https://[username].github.io/[repository-name]`
-- Share this URL with team members
-- Each user can upload their own data files for analysis
+### Option 2: Local Usage
+📁 Download and go: Clone the repository and open `index.html` in your browser  
+📊 Load your data: Click "📁 Load Data" and upload your GitHub Copilot metrics CSV file  
+💡 No server required: The dashboard works directly from your file system - just double-click and open!
 
-## Technical Details
+### Option 3: Clone/Fork and Deploy
+Clone or fork the repository and run it with your own GitHub Actions to deploy to your own GitHub Pages or other hosting platforms. The included GitHub Actions workflow in `.github/workflows/deploy.yml` automatically deploys to GitHub Pages on push to the main branch.
 
-### Built With
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Charts**: Chart.js for interactive visualizations
-- **Styling**: Modern CSS with gradients and animations
-- **Fonts**: Inter font family, Font Awesome icons
-- **Deployment**: GitHub Actions for automated builds
+---
 
-### Browser Compatibility
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- Mobile browsers supported
-- No server-side dependencies
+## 🧪 Sample Data
+A sample dataset (`data_example.csv`) is included in the repository to help you:
+- Explore the dashboard features without your own data
+- Understand the expected data format
+- Test new features during development
 
-### Performance
-- Client-side CSV parsing for fast data loading
-- Efficient data filtering and aggregation
-- Optimized chart rendering
-- Table pagination for large datasets
+The sample data includes:
+- Timestamps, user identifiers, model names, and request counts
+- Realistic usage patterns for testing and exploration
 
-## Customization
+---
 
-### Styling
-- Edit `styles.css` to customize colors, fonts, and layout
-- Gradient colors can be modified in the CSS variables
-- Chart colors are defined in the `generateColors()` function
+## 📋 Getting Your Data
+Ready to see your own Copilot insights? Here's how to get your data in 3 simple steps:
 
-### Functionality
-- Modify `script.js` to add new chart types or metrics
-- Update filter options or add new filtering criteria
-- Customize the CSV parsing logic for different data formats
-
-### Sample Data
-- Replace `data_example.csv` with your own sample dataset
-- Update the filename reference in the `loadSampleData()` function
-
-## Development
-
-### Local Development
-1. Clone the repository
-2. **Important**: The site must be served via HTTP (not opened directly in browser) due to CORS restrictions for loading CSV files
-3. Start a local HTTP server:
-   ```bash
-   # Using Python 3
-   python3 -m http.server 8000
-   
-   # Using Python 2
-   python -m SimpleHTTPServer 8000
-   
-   # Using Node.js
-   npx http-server
-   
-   # Using PHP
-   php -S localhost:8000
+1. Export your GitHub Copilot usage metrics as a CSV file.
+2. Ensure the file matches the expected format:
+   ```csv
+   Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
+   2025-06-18T10:43:41.8378480Z,User41,gpt-4o-2024-11-20,1,FALSE,Unlimited
    ```
-4. Open http://localhost:8000 in your browser
+3. Load the file into the dashboard by clicking "📁 Load Data".
 
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+---
 
-## Security & Privacy
+## 🛠️ Technical Details
+- **Built With**: HTML5, CSS3, vanilla JavaScript, and Chart.js
+- **Browser Compatibility**: Works in all modern browsers (Chrome, Firefox, Safari, Edge)
+- **Performance**: Client-side CSV parsing for fast data loading and efficient filtering
 
-- **No External Dependencies**: All processing happens client-side
-- **No Data Transmission**: Your data never leaves your browser
-- **Local Storage**: No data is persisted unless explicitly exported
-- **HTTPS Deployment**: GitHub Pages provides secure HTTPS hosting
+---
 
-## License
+## 📖 Usage Examples
+- **Enterprise Teams**: Monitor GitHub Copilot Premium request adoption, track usage trends, and optimize licensing
+- **Individual Developers**: Personal productivity tracking, model-specific insights, and usage patterns
 
-This project is open source and available under the [MIT License](LICENSE).
+---
 
-## Support
+## 🤝 Contributing
+We welcome contributions! Please see `CONTRIBUTING.md` for guidelines.
 
+1. Fork the repository  
+2. Create a feature branch  
+3. Make changes  
+4. Test thoroughly  
+5. Submit a pull request  
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the `LICENSE` file for details.
+
+---
+
+## 🆘 Support
 For issues, questions, or contributions:
-1. Check the [Issues](../../issues) section
-2. Create a new issue with detailed information
-3. Consider contributing improvements via pull requests
+- Check the [Issues](../../issues) section
+- Create a new issue with detailed information
+- Consider contributing improvements via pull requests
 
 ---
 
