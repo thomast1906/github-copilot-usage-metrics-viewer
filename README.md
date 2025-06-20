@@ -5,13 +5,12 @@ A web-based dashboard that provides insights into GitHub Copilot Premium request
 
 🚀 Ready to use in seconds! Just open in your browser - no installation, no setup, no server required. All data processing happens locally for complete privacy.
 
-<img alt="GitHub Copilot Dashboard" src="https://img.shields.io/badge/GitHub-Copilot-blue?style=for-the-badge&amp;logo=github">
-
-<img alt="HTML5" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white">
-
-<img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&amp;logo=javascript&amp;logoColor=black">
-
-<img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-F5788D?style=for-the-badge&amp;logo=chart.js&amp;logoColor=white">
+<div style="display: flex; gap: 10px; align-items: center;">
+  <img alt="GitHub Copilot Dashboard" src="https://img.shields.io/badge/GitHub-Copilot-blue?style=for-the-badge&amp;logo=github">
+  <img alt="HTML5" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white">
+  <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&amp;logo=javascript&amp;logoColor=black">
+  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-F5788D?style=for-the-badge&amp;logo=chart.js&amp;logoColor=white">
+</div>
 
 ---
 
