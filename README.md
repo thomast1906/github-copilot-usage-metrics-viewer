@@ -1,7 +1,7 @@
-# GitHub Copilot Usage Metrics Viewer
-📊 Interactive dashboard for visualising GitHub Copilot Premium requests usage metrics and analytics
+# GitHub Copilot  Usage Metrics Viewer
+📊 Interactive dashboard for visualising GitHub Copilot requests usage metrics and analytics
 
-A web-based dashboard that provides insights into GitHub Copilot Premium requests usage patterns, model distribution, user activity, and hourly trends. Built as a single-page application with no external dependencies.
+A web-based dashboard that provides insights into GitHub Copilot requests usage patterns, model distribution, user activity, and hourly trends. Built as a single-page application with no external dependencies.
 
 🚀 Ready to use in seconds! Just open in your browser - no installation, no setup, no server required. All data processing happens locally for complete privacy.
 
