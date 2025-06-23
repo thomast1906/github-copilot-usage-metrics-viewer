@@ -64,16 +64,16 @@ class CopilotUsageAnalyzer {
 
     parseCSV(csvText) {
         const lines = csvText.trim().split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
+        const headers = this.parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
         
         this.rawData = [];
         
         for (let i = 1; i < lines.length; i++) {
-            const values = this.parseCSVLine(lines[i]);
+            const values = this.parseCSVLine(lines[i]).map(v => v.trim().replace(/^"|"$/g, ''));
             if (values.length === headers.length) {
                 const row = {};
                 headers.forEach((header, index) => {
-                    row[header.trim()] = values[index].trim();
+                    row[header] = values[index];
                 });
                 
                 // Parse the data with correct field mapping
@@ -84,7 +84,7 @@ class CopilotUsageAnalyzer {
                         user: row.User,
                         model: row.Model,
                         requests: parseInt(row['Requests Used']) || 1,
-                        exceedsQuota: row['Exceeds Monthly Quota'] === 'TRUE',
+                        exceedsQuota: row['Exceeds Monthly Quota'] === 'TRUE' || row['Exceeds Monthly Quota'] === 'True',
                         quota: row['Total Monthly Quota'] || 'Unlimited',
                         // Keep original data for export
                         originalData: row
