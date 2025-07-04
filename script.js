@@ -1011,12 +1011,22 @@ class CopilotUsageAnalyzer {
             
             userQuotaData[user].totalRequests += requests;
             userQuotaData[user].timestamps.push(row.timestamp);
+        });
+
+        // Now calculate breakdown based on actual quota usage
+        Object.values(userQuotaData).forEach(userData => {
+            const isOverQuota = userData.totalRequests > userData.monthlyQuota;
             
-            if (row.exceedsQuota) {
-                userQuotaData[user].exceedsQuotaRequests += requests;
-                userQuotaData[user].quotaBreakdown.exceeding += requests;
+            if (isOverQuota) {
+                // User exceeded quota - some requests are normal, some exceeding
+                userData.quotaBreakdown.normal = userData.monthlyQuota;
+                userData.quotaBreakdown.exceeding = userData.totalRequests - userData.monthlyQuota;
+                userData.exceedsQuotaRequests = userData.quotaBreakdown.exceeding;
             } else {
-                userQuotaData[user].quotaBreakdown.normal += requests;
+                // User is within quota - all requests are normal
+                userData.quotaBreakdown.normal = userData.totalRequests;
+                userData.quotaBreakdown.exceeding = 0;
+                userData.exceedsQuotaRequests = 0;
             }
         });
 
