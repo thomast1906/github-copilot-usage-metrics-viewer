@@ -229,11 +229,107 @@ class CopilotUsageAnalyzer {
         const uniqueDays = new Set(data.map(row => row.timestamp.toDateString())).size;
         const dailyAverage = uniqueDays > 0 ? Math.round(totalRequests / uniqueDays) : 0;
         
+        // Calculate peak hour
+        const peakHour = this.calculatePeakHour(data);
+        
+        // Calculate weekly growth
+        const weeklyGrowth = this.calculateWeeklyGrowth(data);
+        
+        // Calculate most active user
+        const userStats = {};
+        data.forEach(row => {
+            userStats[row.user] = (userStats[row.user] || 0) + row.requests;
+        });
+        const mostActiveUser = Object.entries(userStats)
+            .sort(([,a], [,b]) => b - a)[0]?.[0] || '--';
+        
+        // Calculate top model
+        const modelStats = {};
+        data.forEach(row => {
+            modelStats[row.model] = (modelStats[row.model] || 0) + row.requests;
+        });
+        const topModel = Object.entries(modelStats)
+            .sort(([,a], [,b]) => b - a)[0]?.[0] || '--';
+        
         document.getElementById('totalUsers').textContent = totalUsers.toLocaleString();
         document.getElementById('totalRequests').textContent = totalRequests.toLocaleString();
         document.getElementById('totalModels').textContent = totalModels.toLocaleString();
         document.getElementById('avgRequestsPerUser').textContent = avgRequestsPerUser.toLocaleString();
         document.getElementById('dailyAverage').textContent = dailyAverage.toLocaleString();
+        document.getElementById('peakHour').textContent = peakHour;
+        document.getElementById('weeklyGrowth').textContent = weeklyGrowth;
+        document.getElementById('mostActiveUser').textContent = mostActiveUser;
+        document.getElementById('topModel').textContent = topModel.length > 20 ? topModel.substring(0, 17) + '...' : topModel;
+    }
+
+    generateColors(count) {
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+            const hue = (i * 360 / count) % 360;
+            colors.push(`hsla(${hue}, 70%, 60%, 0.8)`);
+        }
+        return colors;
+    }
+
+
+
+    calculatePeakHour(data) {
+        const hourlyUsage = {};
+        data.forEach(row => {
+            const hour = row.timestamp.getHours();
+            hourlyUsage[hour] = (hourlyUsage[hour] || 0) + row.requests;
+        });
+
+        let peakHour = 0;
+        let maxUsage = 0;
+        Object.entries(hourlyUsage).forEach(([hour, usage]) => {
+            if (usage > maxUsage) {
+                maxUsage = usage;
+                peakHour = parseInt(hour);
+            }
+        });
+
+        return `${peakHour.toString().padStart(2, '0')}:00`;
+    }
+
+    calculateWeeklyGrowth(data) {
+        if (data.length === 0) return '0%';
+
+        // Sort data by timestamp
+        const sortedData = [...data].sort((a, b) => a.timestamp - b.timestamp);
+        if (sortedData.length === 0) return '0%';
+
+        // Get the date range from the actual data
+        const firstDate = sortedData[0].timestamp;
+        const lastDate = sortedData[sortedData.length - 1].timestamp;
+        const totalDays = Math.ceil((lastDate - firstDate) / (24 * 60 * 60 * 1000));
+
+        // If we don't have at least 14 days of data, calculate based on available data
+        if (totalDays < 14) {
+            const midPoint = Math.floor(sortedData.length / 2);
+            const firstHalf = sortedData.slice(0, midPoint);
+            const secondHalf = sortedData.slice(midPoint);
+            
+            const firstHalfTotal = firstHalf.reduce((sum, row) => sum + row.requests, 0);
+            const secondHalfTotal = secondHalf.reduce((sum, row) => sum + row.requests, 0);
+            
+            if (firstHalfTotal === 0) return secondHalfTotal > 0 ? '+100%' : '0%';
+            
+            const growth = ((secondHalfTotal - firstHalfTotal) / firstHalfTotal) * 100;
+            return (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%';
+        }
+
+        // Use the last 14 days of actual data
+        const twoWeeksAgo = new Date(lastDate.getTime() - 14 * 24 * 60 * 60 * 1000);
+        const oneWeekAgo = new Date(lastDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const thisWeek = sortedData.filter(row => row.timestamp >= oneWeekAgo).reduce((sum, row) => sum + row.requests, 0);
+        const lastWeek = sortedData.filter(row => row.timestamp >= twoWeeksAgo && row.timestamp < oneWeekAgo).reduce((sum, row) => sum + row.requests, 0);
+
+        if (lastWeek === 0) return thisWeek > 0 ? '+100%' : '0%';
+        
+        const growth = ((thisWeek - lastWeek) / lastWeek) * 100;
+        return (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%';
     }
 
     updateCharts() {
@@ -243,6 +339,12 @@ class CopilotUsageAnalyzer {
         this.createUserChart();
         this.createModelTrendsChart();
         this.createDayOfWeekChart();
+        this.createHourlyUsageChart();
+        this.createActivityHeatmapChart();
+        this.createCumulativeGrowthChart();
+        this.createRequestSizeChart();
+        this.createUserEfficiencyChart();
+        this.createModelPerformanceChart();
     }
 
     createTimelineChart() {
@@ -532,17 +634,13 @@ class CopilotUsageAnalyzer {
         }
         
         // Group data by day of week
-        const dayData = {
-            0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0
-        };
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayData = new Array(7).fill(0);
         
         this.filteredData.forEach(row => {
             const dayOfWeek = row.timestamp.getDay();
             dayData[dayOfWeek] += row.requests;
         });
-        
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const values = Object.values(dayData);
         
         this.charts.dayOfWeek = new Chart(ctx, {
             type: 'bar',
@@ -550,9 +648,9 @@ class CopilotUsageAnalyzer {
                 labels: dayNames,
                 datasets: [{
                     label: 'Requests',
-                    data: values,
-                    backgroundColor: '#4facfe',
-                    borderColor: '#4facfe',
+                    data: dayData,
+                    backgroundColor: '#4285f4',
+                    borderColor: '#4285f4',
                     borderWidth: 1
                 }]
             },
@@ -566,6 +664,366 @@ class CopilotUsageAnalyzer {
                 },
                 scales: {
                     y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    createHourlyUsageChart() {
+        const ctx = document.getElementById('hourlyUsageChart').getContext('2d');
+        
+        if (this.charts.hourlyUsage) {
+            this.charts.hourlyUsage.destroy();
+        }
+        
+        // Group data by hour
+        const hourData = new Array(24).fill(0);
+        
+        this.filteredData.forEach(row => {
+            const hour = row.timestamp.getHours();
+            hourData[hour] += row.requests;
+        });
+        
+        const labels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        
+        this.charts.hourlyUsage = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Requests',
+                    data: hourData,
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    createActivityHeatmapChart() {
+        const ctx = document.getElementById('activityHeatmapChart').getContext('2d');
+        
+        if (this.charts.activityHeatmap) {
+            this.charts.activityHeatmap.destroy();
+        }
+        
+        // Create day vs hour heatmap data
+        const heatmapData = {};
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        
+        this.filteredData.forEach(row => {
+            const day = row.timestamp.getDay();
+            const hour = row.timestamp.getHours();
+            const key = `${day}-${hour}`;
+            heatmapData[key] = (heatmapData[key] || 0) + row.requests;
+        });
+        
+        // Convert to chart.js format (simplified bar chart since heatmap requires additional library)
+        const hourlyByDay = dayNames.map((day, dayIndex) => {
+            let dayTotal = 0;
+            for (let hour = 0; hour < 24; hour++) {
+                dayTotal += heatmapData[`${dayIndex}-${hour}`] || 0;
+            }
+            return dayTotal;
+        });
+        
+        this.charts.activityHeatmap = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dayNames,
+                datasets: [{
+                    label: 'Total Daily Activity',
+                    data: hourlyByDay,
+                    backgroundColor: '#34a853',
+                    borderColor: '#34a853',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    createCumulativeGrowthChart() {
+        const ctx = document.getElementById('cumulativeGrowthChart').getContext('2d');
+        
+        if (this.charts.cumulativeGrowth) {
+            this.charts.cumulativeGrowth.destroy();
+        }
+        
+        // Group data by date and calculate cumulative sum
+        const dailyData = {};
+        this.filteredData.forEach(row => {
+            const date = row.timestamp.toISOString().split('T')[0];
+            dailyData[date] = (dailyData[date] || 0) + row.requests;
+        });
+        
+        const sortedDates = Object.keys(dailyData).sort();
+        let cumulative = 0;
+        const cumulativeData = sortedDates.map(date => {
+            cumulative += dailyData[date];
+            return cumulative;
+        });
+        
+        this.charts.cumulativeGrowth = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sortedDates.map(date => new Date(date).toLocaleDateString()),
+                datasets: [{
+                    label: 'Cumulative Requests',
+                    data: cumulativeData,
+                    borderColor: '#9c27b0',
+                    backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    createRequestSizeChart() {
+        const ctx = document.getElementById('requestSizeChart').getContext('2d');
+        
+        if (this.charts.requestSize) {
+            this.charts.requestSize.destroy();
+        }
+        
+        // Group requests by size categories
+        const sizeCategories = {
+            'Small (1)': 0,
+            'Medium (2-5)': 0,
+            'Large (6-10)': 0,
+            'Extra Large (11+)': 0
+        };
+        
+        this.filteredData.forEach(row => {
+            if (row.requests === 1) {
+                sizeCategories['Small (1)']++;
+            } else if (row.requests <= 5) {
+                sizeCategories['Medium (2-5)']++;
+            } else if (row.requests <= 10) {
+                sizeCategories['Large (6-10)']++;
+            } else {
+                sizeCategories['Extra Large (11+)']++;
+            }
+        });
+        
+        const labels = Object.keys(sizeCategories);
+        const values = Object.values(sizeCategories);
+        
+        this.charts.requestSize = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#4caf50', '#ff9800', '#f44336', '#9c27b0'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    createUserEfficiencyChart() {
+        const ctx = document.getElementById('userEfficiencyChart').getContext('2d');
+        
+        if (this.charts.userEfficiency) {
+            this.charts.userEfficiency.destroy();
+        }
+        
+        // Calculate efficiency metrics (requests per day active)
+        const userEfficiency = {};
+        this.filteredData.forEach(row => {
+            if (!userEfficiency[row.user]) {
+                userEfficiency[row.user] = {
+                    totalRequests: 0,
+                    activeDays: new Set()
+                };
+            }
+            userEfficiency[row.user].totalRequests += row.requests;
+            userEfficiency[row.user].activeDays.add(row.timestamp.toDateString());
+        });
+        
+        const efficiencyData = Object.entries(userEfficiency)
+            .map(([user, data]) => ({
+                user,
+                efficiency: data.totalRequests / data.activeDays.size
+            }))
+            .sort((a, b) => b.efficiency - a.efficiency)
+            .slice(0, 10);
+        
+        const labels = efficiencyData.map(item => item.user);
+        const values = efficiencyData.map(item => item.efficiency);
+        
+        this.charts.userEfficiency = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Requests per Active Day',
+                    data: values,
+                    backgroundColor: '#17a2b8',
+                    borderColor: '#17a2b8',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(1);
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    createModelPerformanceChart() {
+        const ctx = document.getElementById('modelPerformanceChart').getContext('2d');
+        
+        if (this.charts.modelPerformance) {
+            this.charts.modelPerformance.destroy();
+        }
+        
+        // Calculate model usage frequency and user adoption
+        const modelStats = {};
+        this.filteredData.forEach(row => {
+            if (!modelStats[row.model]) {
+                modelStats[row.model] = {
+                    totalRequests: 0,
+                    uniqueUsers: new Set(),
+                    totalSessions: 0
+                };
+            }
+            modelStats[row.model].totalRequests += row.requests;
+            modelStats[row.model].uniqueUsers.add(row.user);
+        });
+        
+        const performanceData = Object.entries(modelStats)
+            .map(([model, stats]) => ({
+                model,
+                adoptionRate: stats.uniqueUsers.size,
+                avgRequestsPerUser: stats.totalRequests / stats.uniqueUsers.size
+            }))
+            .sort((a, b) => b.adoptionRate - a.adoptionRate)
+            .slice(0, 8);
+        
+        this.charts.modelPerformance = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Model Performance',
+                    data: performanceData.map((item, index) => ({
+                        x: item.adoptionRate,
+                        y: item.avgRequestsPerUser,
+                        label: item.model
+                    })),
+                    backgroundColor: '#fd7e14',
+                    borderColor: '#fd7e14',
+                    pointRadius: 8,
+                    pointHoverRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const point = context.raw;
+                                return `${point.label}: ${point.x} users, ${point.y.toFixed(1)} avg requests/user`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'User Adoption (# of Users)'
+                        },
+                        beginAtZero: true
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Avg Requests per User'
+                        },
                         beginAtZero: true
                     }
                 }
@@ -776,6 +1234,12 @@ class CopilotUsageAnalyzer {
             case 'quota-distribution-modal':
                 // This is handled by chart click
                 break;
+            case 'quota-near-limit-modal':
+                this.populateQuotaNearLimitModal();
+                break;
+            case 'quota-over-limit-modal':
+                this.populateQuotaOverLimitModal();
+                break;
             case 'users-modal':
                 this.populateUsersModal();
                 break;
@@ -785,7 +1249,63 @@ class CopilotUsageAnalyzer {
             case 'model-distribution-modal':
                 // This is handled by chart click
                 break;
+            case 'cost-analysis-modal':
+                this.populateCostAnalysisModal();
+                break;
+            case 'cost-breakdown-modal':
+                this.populateCostBreakdownModal();
+                break;
         }
+    }
+
+    populateCostAnalysisModal() {
+        const tbody = document.getElementById('costAnalysisTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        const userCosts = {};
+        const costRates = {
+            'gpt-4o': 0.005,
+            'gpt-4.1': 0.003,
+            'gpt-4': 0.003,
+            'claude-sonnet-4': 0.003,
+            'claude-3.7-sonnet': 0.003,
+            'o1-2024-12-17': 0.015,
+            'Code Review': 0.002
+        };
+        
+        this.filteredData.forEach(row => {
+            const baseModel = Object.keys(costRates).find(model => 
+                row.model.toLowerCase().includes(model.toLowerCase())
+            );
+            const costPerRequest = baseModel ? costRates[baseModel] : 0.002;
+            
+            if (!userCosts[row.user]) {
+                userCosts[row.user] = {
+                    requests: 0,
+                    cost: 0
+                };
+            }
+            
+            userCosts[row.user].requests += row.requests;
+            userCosts[row.user].cost += row.requests * costPerRequest;
+        });
+
+        const sortedUsers = Object.entries(userCosts)
+            .sort(([,a], [,b]) => b.cost - a.cost);
+
+        sortedUsers.forEach(([user, data]) => {
+            const avgCostPerRequest = data.requests > 0 ? (data.cost / data.requests) : 0;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${user}</td>
+                <td>${data.requests.toLocaleString()}</td>
+                <td>$${data.cost.toFixed(3)}</td>
+                <td>$${avgCostPerRequest.toFixed(4)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
     populateQuotaUsersModal() {
@@ -894,34 +1414,6 @@ class CopilotUsageAnalyzer {
         });
     }
 
-    generateColors(count) {
-        const colors = [
-            'rgba(102, 126, 234, 0.8)',
-            'rgba(240, 147, 251, 0.8)',
-            'rgba(79, 172, 254, 0.8)',
-            'rgba(255, 107, 107, 0.8)',
-            'rgba(54, 215, 183, 0.8)',
-            'rgba(255, 195, 113, 0.8)',
-            'rgba(196, 181, 253, 0.8)',
-            'rgba(255, 154, 158, 0.8)',
-            'rgba(134, 239, 172, 0.8)',
-            'rgba(251, 191, 36, 0.8)'
-        ];
-        
-        if (count <= colors.length) {
-            return colors.slice(0, count);
-        }
-        
-        // Generate additional colors if needed
-        const additionalColors = [];
-        for (let i = colors.length; i < count; i++) {
-            const hue = (i * 137.508) % 360; // Golden angle approximation
-            additionalColors.push(`hsla(${hue}, 70%, 60%, 0.8)`);
-        }
-        
-        return [...colors, ...additionalColors];
-    }
-
     exportFilteredData() {
         if (this.filteredData.length === 0) {
             alert('No data to export');
@@ -990,6 +1482,8 @@ class CopilotUsageAnalyzer {
         // Calculate quota usage for each user
         const userQuotaData = {};
         
+        console.log('Processing quota data from rawData:', this.rawData.length, 'records');
+        
         this.rawData.forEach(row => {
             const user = row.user;
             const quota = parseInt(row.quota) || 0;
@@ -1047,6 +1541,9 @@ class CopilotUsageAnalyzer {
 
         // Populate quota filters
         this.populateQuotaFilters();
+        
+        console.log('Processed quota data:', this.quotaData.length, 'users');
+        console.log('Sample processed data:', this.quotaData.slice(0, 3));
     }
 
     populateQuotaFilters() {
@@ -1088,12 +1585,15 @@ class CopilotUsageAnalyzer {
         }
         
         this.filteredQuotaData = filtered;
+        console.log('Filtered quota data:', filtered.length, 'users');
         this.updateQuotaDashboard();
     }
 
     updateQuotaDashboard() {
+        console.log('updateQuotaDashboard called, currentTab:', this.currentTab);
         if (this.currentTab !== 'quota-dashboard') return;
         
+        console.log('Updating quota dashboard...');
         this.updateQuotaStatCards();
         this.updateQuotaCharts();
         this.updateQuotaTable();
@@ -1102,15 +1602,20 @@ class CopilotUsageAnalyzer {
     updateQuotaStatCards() {
         const data = this.filteredQuotaData;
         
+        console.log('Quota data length:', data.length);
+        console.log('Sample quota data:', data.slice(0, 3));
+        
         const totalUsers = data.length;
         const usersOverQuota = data.filter(row => row.usagePercentage > 100).length;
+        const usersNearLimit = data.filter(row => row.usagePercentage > 80 && row.usagePercentage <= 100).length;
         const averageUsage = totalUsers > 0 
             ? (data.reduce((sum, row) => sum + row.usagePercentage, 0) / totalUsers).toFixed(1)
             : 0;
         
         document.getElementById('quotaTotalUsers').textContent = totalUsers.toLocaleString();
-        document.getElementById('quotaExceededUsers').textContent = usersOverQuota.toLocaleString();
         document.getElementById('quotaAverageUsage').textContent = averageUsage + '%';
+        document.getElementById('quotaNearLimitUsers').textContent = usersNearLimit.toLocaleString();
+        document.getElementById('quotaOverLimitUsers').textContent = usersOverQuota.toLocaleString();
     }
 
     updateQuotaCharts() {
@@ -1184,6 +1689,67 @@ class CopilotUsageAnalyzer {
                     }
                 }
             }
+        });
+    }
+
+    showCostBreakdownDetails() {
+        const modal = document.getElementById('cost-breakdown-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            this.populateCostBreakdownModal();
+        }
+    }
+
+    populateCostBreakdownModal() {
+        const tbody = document.getElementById('costBreakdownTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        const modelCosts = {};
+        const costRates = {
+            'gpt-4o': 0.005,
+            'gpt-4.1': 0.003,
+            'gpt-4': 0.003,
+            'claude-sonnet-4': 0.003,
+            'claude-3.7-sonnet': 0.003,
+            'o1-2024-12-17': 0.015,
+            'Code Review': 0.002
+        };
+        
+        this.filteredData.forEach(row => {
+            const baseModel = Object.keys(costRates).find(model => 
+                row.model.toLowerCase().includes(model.toLowerCase())
+            );
+            const costPerRequest = baseModel ? costRates[baseModel] : 0.002;
+            
+            if (!modelCosts[row.model]) {
+                modelCosts[row.model] = {
+                    requests: 0,
+                    cost: 0,
+                    costPerRequest: costPerRequest
+                };
+            }
+            
+            modelCosts[row.model].requests += row.requests;
+            modelCosts[row.model].cost += row.requests * costPerRequest;
+        });
+
+        const totalCost = Object.values(modelCosts).reduce((sum, model) => sum + model.cost, 0);
+        const sortedModels = Object.entries(modelCosts)
+            .sort(([,a], [,b]) => b.cost - a.cost);
+
+        sortedModels.forEach(([model, data]) => {
+            const percentage = totalCost > 0 ? ((data.cost / totalCost) * 100).toFixed(1) : 0;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${model}</td>
+                <td>${data.requests.toLocaleString()}</td>
+                <td>$${data.costPerRequest.toFixed(4)}</td>
+                <td>$${data.cost.toFixed(3)}</td>
+                <td>${percentage}%</td>
+            `;
+            tbody.appendChild(tr);
         });
     }
 
@@ -1459,6 +2025,53 @@ class CopilotUsageAnalyzer {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    populateQuotaNearLimitModal() {
+        const tbody = document.getElementById('quotaNearLimitDetailTableBody');
+        tbody.innerHTML = '';
+
+        const nearLimitUsers = this.filteredQuotaData
+            .filter(row => row.usagePercentage >= 80 && row.usagePercentage <= 100)
+            .sort((a, b) => b.usagePercentage - a.usagePercentage);
+
+        nearLimitUsers.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            tr.innerHTML = `
+                <td>${row.user}</td>
+                <td>${row.totalRequests.toLocaleString()}</td>
+                <td>${row.monthlyQuota.toLocaleString()}</td>
+                <td class="quota-warning">${row.usagePercentage.toFixed(1)}%</td>
+                <td class="quota-warning">${row.status}</td>
+                <td>${row.remainingQuota.toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    populateQuotaOverLimitModal() {
+        const tbody = document.getElementById('quotaOverLimitDetailTableBody');
+        tbody.innerHTML = '';
+
+        const overLimitUsers = this.filteredQuotaData
+            .filter(row => row.usagePercentage > 100)
+            .sort((a, b) => b.usagePercentage - a.usagePercentage);
+
+        overLimitUsers.forEach(row => {
+            const tr = document.createElement('tr');
+            const requestsOverQuota = Math.max(0, row.totalRequests - row.monthlyQuota);
+            
+            tr.innerHTML = `
+                <td>${row.user}</td>
+                <td>${row.totalRequests.toLocaleString()}</td>
+                <td>${row.monthlyQuota.toLocaleString()}</td>
+                <td class="quota-exceeded">${row.usagePercentage.toFixed(1)}%</td>
+                <td class="quota-exceeded">${requestsOverQuota.toLocaleString()}</td>
+                <td class="quota-exceeded">${row.status}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 }
 
