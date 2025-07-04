@@ -189,7 +189,7 @@
                 </div>
 
                 <div class="stats-grid">
-                    <div class="stat-card">
+                    <div class="stat-card clickable" data-modal="quota-users-modal">
                         <div class="stat-icon">
                             <i class="fas fa-users"></i>
                         </div>
@@ -207,7 +207,7 @@
                             <p>Average Quota Usage</p>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card clickable" data-modal="quota-users-modal">
                         <div class="stat-icon">
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
@@ -216,24 +216,7 @@
                             <p>Users Over Quota</p>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-calculator"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="quotaTotalRequests">0</h3>
-                            <p>Total Requests Used</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-tachometer-alt"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="quotaTotalQuota">0</h3>
-                            <p>Total Monthly Quota</p>
-                        </div>
-                    </div>
+
                 </div>
 
                 <div class="charts-grid">
@@ -241,7 +224,7 @@
                         <h3>Quota Usage by User</h3>
                         <canvas id="quotaUsageChart"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card clickable" data-modal="quota-distribution-modal">
                         <h3>Quota Usage Distribution</h3>
                         <canvas id="quotaDistributionChart"></canvas>
                     </div>
@@ -283,6 +266,7 @@
         </div>
 
         <!-- Modal Windows -->
+        <!-- Models Modal -->
         <div id="models-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -305,6 +289,30 @@
             </div>
         </div>
 
+        <!-- Users Modal -->
+        <div id="users-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>User Activity Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="usersDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Total Requests</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Distribution Modal -->
         <div id="model-distribution-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -318,95 +326,71 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Models Modal -->
-    <div id="models-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Model Usage Details</h3>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>Model</th>
-                        <th>Requests</th>
-                        <th>Percentage</th>
-                    </tr>
-                </thead>
-                <tbody id="modelsDetailTableBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Users Modal -->
-    <div id="users-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>User Activity Details</h3>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Requests</th>
-                        <th>Percentage</th>
-                    </tr>
-                </thead>
-                <tbody id="usersDetailTableBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Model Distribution Modal -->
-    <div id="model-distribution-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <div id="modelDistributionDetails">
+        <!-- Quota Users Modal -->
+        <div id="quota-users-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Quota Usage Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="quotaUsersDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Total Requests</th>
+                                <th>Monthly Quota</th>
+                                <th>Usage %</th>
+                                <th>Status</th>
+                                <th>Remaining Quota</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotaUsersDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Quota Users Modal -->
-    <div id="quota-users-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Quota Usage Details</h3>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Total Requests</th>
-                        <th>Monthly Quota</th>
-                        <th>Usage %</th>
-                        <th>Status</th>
-                        <th>Remaining Quota</th>
-                    </tr>
-                </thead>
-                <tbody id="quotaUsersDetailTableBody">
-                </tbody>
-            </table>
+        <!-- Quota Breakdown Modal -->
+        <div id="quota-breakdown-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>User Request Breakdown Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="quotaBreakdownDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Normal Requests</th>
+                                <th>Exceeding Requests</th>
+                                <th>Total Requests</th>
+                                <th>Usage %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotaBreakdownDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- Quota Breakdown Modal -->
-    <div id="quota-breakdown-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>User Request Breakdown Details</h3>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Normal Requests</th>
-                        <th>Exceeding Requests</th>
-                        <th>Total Requests</th>
-                        <th>Usage %</th>
-                    </tr>
-                </thead>
-                <tbody id="quotaBreakdownDetailTableBody">
-                </tbody>
-            </table>
+        <!-- Quota Distribution Modal -->
+        <div id="quota-distribution-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Quota Distribution Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="quotaDistributionDetails">
+                        <p>Click on a segment in the chart to see user details for that quota category.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -300,6 +300,33 @@ body {
     color: #333;
 }
 
+.modal-body tr:hover {
+    background: #f8f9fa;
+}
+
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.detail-table th,
+.detail-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.detail-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.detail-table tr:hover {
+    background: #f8f9fa;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

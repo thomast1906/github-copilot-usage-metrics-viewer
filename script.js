@@ -95,9 +95,9 @@ class CopilotUsageAnalyzer {
                         timestamp: timestamp,
                         user: row.User,
                         model: row.Model,
-                        requests: parseInt(row['Requests Used']) || 1,
+                        requests: parseFloat(row['Requests Used']) || 1,
                         exceedsQuota: row['Exceeds Monthly Quota'] === 'TRUE' || row['Exceeds Monthly Quota'] === 'True',
-                        quota: row['Total Monthly Quota'] || 'Unlimited',
+                        quota: parseInt(row['Total Monthly Quota']) || 300,
                         // Keep original data for export
                         originalData: row
                     });
@@ -334,6 +334,13 @@ class CopilotUsageAnalyzer {
                             padding: 20,
                             usePointStyle: true
                         }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const modelName = labels[element.index];
+                        this.showModelDistributionDetails(modelName);
                     }
                 }
             }
@@ -589,7 +596,7 @@ class CopilotUsageAnalyzer {
 
     filterTable() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const rows = document.querySelectorAll('#tableBody tr');
+        const rows = document.querySelectorAll('#dataTableBody tr');
         
         rows.forEach(row => {
             const text = row.textContent.toLowerCase();
@@ -649,6 +656,115 @@ class CopilotUsageAnalyzer {
         });
     }
 
+    showQuotaDistributionDetails(category) {
+        const modal = document.getElementById('quota-distribution-modal');
+        const detailsDiv = document.getElementById('quotaDistributionDetails');
+        
+        // Filter users by category
+        let filteredUsers = [];
+        if (category === 'Normal (0-80%)') {
+            filteredUsers = this.filteredQuotaData.filter(row => row.usagePercentage <= 80);
+        } else if (category === 'Near Quota (80-100%)') {
+            filteredUsers = this.filteredQuotaData.filter(row => row.usagePercentage > 80 && row.usagePercentage <= 100);
+        } else if (category === 'Over Quota (>100%)') {
+            filteredUsers = this.filteredQuotaData.filter(row => row.usagePercentage > 100);
+        }
+        
+        // Sort by usage percentage
+        filteredUsers.sort((a, b) => b.usagePercentage - a.usagePercentage);
+        
+        // Create table HTML
+        let tableHTML = `
+            <h4>Users in Category: ${category}</h4>
+            <p>Total Users: ${filteredUsers.length}</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">User</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">Requests</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">Quota</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">Usage %</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        filteredUsers.forEach(user => {
+            const statusClass = user.usagePercentage > 100 ? 'color: #dc3545;' : 
+                              user.usagePercentage > 80 ? 'color: #ffc107;' : 'color: #28a745;';
+            tableHTML += `
+                <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1;">${user.user}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1;">${user.totalRequests.toLocaleString()}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1;">${user.monthlyQuota.toLocaleString()}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1; ${statusClass}">${user.usagePercentage.toFixed(1)}%</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1; ${statusClass}">${user.status}</td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        detailsDiv.innerHTML = tableHTML;
+        modal.style.display = 'block';
+    }
+
+    showModelDistributionDetails(modelName) {
+        const modal = document.getElementById('model-distribution-modal');
+        const detailsDiv = document.getElementById('modelDistributionDetails');
+        
+        // Get users for this model
+        const modelUsers = {};
+        this.filteredData
+            .filter(row => row.model === modelName)
+            .forEach(row => {
+                modelUsers[row.user] = (modelUsers[row.user] || 0) + row.requests;
+            });
+        
+        const sortedUsers = Object.entries(modelUsers)
+            .sort(([,a], [,b]) => b - a);
+        
+        const totalModelRequests = sortedUsers.reduce((sum, [, requests]) => sum + requests, 0);
+        
+        // Create table HTML
+        let tableHTML = `
+            <h4>Users for Model: ${modelName}</h4>
+            <p>Total Requests: ${totalModelRequests.toLocaleString()}</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">User</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">Requests</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e1e1e1;">% of Model Usage</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        sortedUsers.forEach(([user, requests]) => {
+            const percentage = ((requests / totalModelRequests) * 100).toFixed(1);
+            tableHTML += `
+                <tr>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1;">${user}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1;">${requests.toLocaleString()}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid #e1e1e1;">${percentage}%</td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        detailsDiv.innerHTML = tableHTML;
+        modal.style.display = 'block';
+    }
+
     populateModal(modalId) {
         switch(modalId) {
             case 'quota-users-modal':
@@ -657,11 +773,17 @@ class CopilotUsageAnalyzer {
             case 'quota-breakdown-modal':
                 this.populateQuotaBreakdownModal();
                 break;
+            case 'quota-distribution-modal':
+                // This is handled by chart click
+                break;
             case 'users-modal':
                 this.populateUsersModal();
                 break;
             case 'models-modal':
                 this.populateModelsModal();
+                break;
+            case 'model-distribution-modal':
+                // This is handled by chart click
                 break;
         }
     }
@@ -971,16 +1093,12 @@ class CopilotUsageAnalyzer {
         const data = this.filteredQuotaData;
         
         const totalUsers = data.length;
-        const totalRequests = data.reduce((sum, row) => sum + row.totalRequests, 0);
-        const totalQuota = data.reduce((sum, row) => sum + row.monthlyQuota, 0);
         const usersOverQuota = data.filter(row => row.usagePercentage > 100).length;
         const averageUsage = totalUsers > 0 
             ? (data.reduce((sum, row) => sum + row.usagePercentage, 0) / totalUsers).toFixed(1)
             : 0;
         
         document.getElementById('quotaTotalUsers').textContent = totalUsers.toLocaleString();
-        document.getElementById('quotaTotalRequests').textContent = totalRequests.toLocaleString();
-        document.getElementById('quotaTotalQuota').textContent = totalQuota.toLocaleString();
         document.getElementById('quotaExceededUsers').textContent = usersOverQuota.toLocaleString();
         document.getElementById('quotaAverageUsage').textContent = averageUsage + '%';
     }
@@ -1104,6 +1222,13 @@ class CopilotUsageAnalyzer {
                 plugins: {
                     legend: {
                         position: 'bottom'
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const category = labels[element.index];
+                        this.showQuotaDistributionDetails(category);
                     }
                 }
             }
