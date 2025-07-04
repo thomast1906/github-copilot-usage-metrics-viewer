@@ -1249,63 +1249,7 @@ class CopilotUsageAnalyzer {
             case 'model-distribution-modal':
                 // This is handled by chart click
                 break;
-            case 'cost-analysis-modal':
-                this.populateCostAnalysisModal();
-                break;
-            case 'cost-breakdown-modal':
-                this.populateCostBreakdownModal();
-                break;
         }
-    }
-
-    populateCostAnalysisModal() {
-        const tbody = document.getElementById('costAnalysisTableBody');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        const userCosts = {};
-        const costRates = {
-            'gpt-4o': 0.005,
-            'gpt-4.1': 0.003,
-            'gpt-4': 0.003,
-            'claude-sonnet-4': 0.003,
-            'claude-3.7-sonnet': 0.003,
-            'o1-2024-12-17': 0.015,
-            'Code Review': 0.002
-        };
-        
-        this.filteredData.forEach(row => {
-            const baseModel = Object.keys(costRates).find(model => 
-                row.model.toLowerCase().includes(model.toLowerCase())
-            );
-            const costPerRequest = baseModel ? costRates[baseModel] : 0.002;
-            
-            if (!userCosts[row.user]) {
-                userCosts[row.user] = {
-                    requests: 0,
-                    cost: 0
-                };
-            }
-            
-            userCosts[row.user].requests += row.requests;
-            userCosts[row.user].cost += row.requests * costPerRequest;
-        });
-
-        const sortedUsers = Object.entries(userCosts)
-            .sort(([,a], [,b]) => b.cost - a.cost);
-
-        sortedUsers.forEach(([user, data]) => {
-            const avgCostPerRequest = data.requests > 0 ? (data.cost / data.requests) : 0;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${user}</td>
-                <td>${data.requests.toLocaleString()}</td>
-                <td>$${data.cost.toFixed(3)}</td>
-                <td>$${avgCostPerRequest.toFixed(4)}</td>
-            `;
-            tbody.appendChild(tr);
-        });
     }
 
     populateQuotaUsersModal() {
@@ -1488,6 +1432,13 @@ class CopilotUsageAnalyzer {
             const user = row.user;
             const quota = parseInt(row.quota) || 0;
             const requests = row.requests;
+            const model = row.model.toLowerCase();
+            
+            // Skip GPT-4.1* and GPT-4.0* variations - they don't count towards quota
+            if (model.includes('gpt-4.1') || model.includes('gpt-4.0')) {
+                console.log(`Excluding from quota: ${row.model} for user ${user}`);
+                return; // Skip this row - don't count towards quota
+            }
             
             if (!userQuotaData[user]) {
                 userQuotaData[user] = {
@@ -1689,67 +1640,6 @@ class CopilotUsageAnalyzer {
                     }
                 }
             }
-        });
-    }
-
-    showCostBreakdownDetails() {
-        const modal = document.getElementById('cost-breakdown-modal');
-        if (modal) {
-            modal.style.display = 'block';
-            this.populateCostBreakdownModal();
-        }
-    }
-
-    populateCostBreakdownModal() {
-        const tbody = document.getElementById('costBreakdownTableBody');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        const modelCosts = {};
-        const costRates = {
-            'gpt-4o': 0.005,
-            'gpt-4.1': 0.003,
-            'gpt-4': 0.003,
-            'claude-sonnet-4': 0.003,
-            'claude-3.7-sonnet': 0.003,
-            'o1-2024-12-17': 0.015,
-            'Code Review': 0.002
-        };
-        
-        this.filteredData.forEach(row => {
-            const baseModel = Object.keys(costRates).find(model => 
-                row.model.toLowerCase().includes(model.toLowerCase())
-            );
-            const costPerRequest = baseModel ? costRates[baseModel] : 0.002;
-            
-            if (!modelCosts[row.model]) {
-                modelCosts[row.model] = {
-                    requests: 0,
-                    cost: 0,
-                    costPerRequest: costPerRequest
-                };
-            }
-            
-            modelCosts[row.model].requests += row.requests;
-            modelCosts[row.model].cost += row.requests * costPerRequest;
-        });
-
-        const totalCost = Object.values(modelCosts).reduce((sum, model) => sum + model.cost, 0);
-        const sortedModels = Object.entries(modelCosts)
-            .sort(([,a], [,b]) => b.cost - a.cost);
-
-        sortedModels.forEach(([model, data]) => {
-            const percentage = totalCost > 0 ? ((data.cost / totalCost) * 100).toFixed(1) : 0;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${model}</td>
-                <td>${data.requests.toLocaleString()}</td>
-                <td>$${data.costPerRequest.toFixed(4)}</td>
-                <td>$${data.cost.toFixed(3)}</td>
-                <td>${percentage}%</td>
-            `;
-            tbody.appendChild(tr);
         });
     }
 
