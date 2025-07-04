@@ -567,7 +567,7 @@ class CopilotUsageAnalyzer {
     }
 
     updateTable() {
-        const tbody = document.getElementById('dataTableBody');
+        const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
         
         // Sort by timestamp (newest first)
@@ -620,156 +620,151 @@ class CopilotUsageAnalyzer {
     }
 
     setupStatCardListeners() {
-        // Handle stat card clicks for modals
-        document.querySelectorAll('.stat-card.clickable').forEach(card => {
-            const modalId = card.getAttribute('data-modal');
-            if (modalId) {
-                card.addEventListener('click', () => {
-                    const modal = document.getElementById(modalId);
-                    if (modal) {
-                        modal.style.display = 'block';
-                        this.populateModal(modalId);
-                    }
-                });
-            }
+        document.getElementById('totalUsersCard').addEventListener('click', () => {
+            this.showUserDetails();
         });
-
-        // Handle chart card clicks for modals
-        document.querySelectorAll('.chart-card.clickable').forEach(card => {
-            const modalId = card.getAttribute('data-modal');
-            if (modalId) {
-                card.addEventListener('click', () => {
-                    const modal = document.getElementById(modalId);
-                    if (modal) {
-                        modal.style.display = 'block';
-                        this.populateModal(modalId);
-                    }
-                });
-            }
+        
+        document.getElementById('totalRequestsCard').addEventListener('click', () => {
+            this.showRequestDetails();
+        });
+        
+        document.getElementById('totalModelsCard').addEventListener('click', () => {
+            this.showModelDetails();
         });
     }
 
-    populateModal(modalId) {
-        switch(modalId) {
-            case 'quota-users-modal':
-                this.populateQuotaUsersModal();
-                break;
-            case 'quota-breakdown-modal':
-                this.populateQuotaBreakdownModal();
-                break;
-            case 'users-modal':
-                this.populateUsersModal();
-                break;
-            case 'models-modal':
-                this.populateModelsModal();
-                break;
-        }
-    }
-
-    populateQuotaUsersModal() {
-        const tbody = document.getElementById('quotaUsersDetailTableBody');
-        tbody.innerHTML = '';
-
-        const sortedData = [...this.filteredQuotaData]
-            .sort((a, b) => b.usagePercentage - a.usagePercentage);
-
-        sortedData.forEach(row => {
-            const tr = document.createElement('tr');
-            const statusClass = row.usagePercentage > 100 ? 'quota-exceeded' : 'quota-normal';
-            
-            tr.innerHTML = `
-                <td>${row.user}</td>
-                <td>${row.totalRequests.toLocaleString()}</td>
-                <td>${row.monthlyQuota.toLocaleString()}</td>
-                <td class="${statusClass}">${row.usagePercentage.toFixed(1)}%</td>
-                <td class="${statusClass}">${row.status}</td>
-                <td>${row.remainingQuota.toLocaleString()}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    populateQuotaBreakdownModal() {
-        const tbody = document.getElementById('quotaBreakdownDetailTableBody');
-        tbody.innerHTML = '';
-
-        const sortedData = [...this.filteredQuotaData]
-            .sort((a, b) => b.totalRequests - a.totalRequests);
-
-        sortedData.forEach(row => {
-            const tr = document.createElement('tr');
-            const statusClass = row.usagePercentage > 100 ? 'quota-exceeded' : 'quota-normal';
-            
-            tr.innerHTML = `
-                <td>${row.user}</td>
-                <td>${row.quotaBreakdown.normal.toLocaleString()}</td>
-                <td>${row.quotaBreakdown.exceeding.toLocaleString()}</td>
-                <td>${row.totalRequests.toLocaleString()}</td>
-                <td class="${statusClass}">${row.usagePercentage.toFixed(1)}%</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    populateUsersModal() {
-        // Implementation for users modal
-        const tbody = document.getElementById('usersDetailTableBody');
-        if (!tbody) return;
-
+    showUserDetails() {
+        const modal = document.getElementById('userModal');
+        const tbody = document.getElementById('userModalBody');
+        
+        // Calculate user statistics
         const userStats = {};
         this.filteredData.forEach(row => {
             if (!userStats[row.user]) {
                 userStats[row.user] = {
                     requests: 0,
-                    models: new Set()
+                    models: new Set(),
+                    firstRequest: row.timestamp,
+                    lastRequest: row.timestamp
                 };
             }
+            
             userStats[row.user].requests += row.requests;
             userStats[row.user].models.add(row.model);
+            
+            if (row.timestamp < userStats[row.user].firstRequest) {
+                userStats[row.user].firstRequest = row.timestamp;
+            }
+            if (row.timestamp > userStats[row.user].lastRequest) {
+                userStats[row.user].lastRequest = row.timestamp;
+            }
         });
-
-        const totalRequests = this.filteredData.reduce((sum, row) => sum + row.requests, 0);
+        
+        // Sort by requests (descending)
         const sortedUsers = Object.entries(userStats)
             .sort(([,a], [,b]) => b.requests - a.requests);
-
+        
         tbody.innerHTML = '';
         sortedUsers.forEach(([user, stats]) => {
-            const percentage = ((stats.requests / totalRequests) * 100).toFixed(1);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${user}</td>
                 <td>${stats.requests.toLocaleString()}</td>
-                <td>${percentage}%</td>
+                <td>${stats.models.size}</td>
+                <td>${stats.firstRequest.toLocaleDateString()}</td>
+                <td>${stats.lastRequest.toLocaleDateString()}</td>
             `;
             tbody.appendChild(tr);
         });
+        
+        modal.style.display = 'block';
     }
 
-    populateModelsModal() {
-        // Implementation for models modal  
-        const tbody = document.getElementById('modelsDetailTableBody');
-        if (!tbody) return;
+    showRequestDetails() {
+        const modal = document.getElementById('requestModal');
+        const tbody = document.getElementById('requestModalBody');
+        
+        // Group by date
+        const dailyStats = {};
+        this.filteredData.forEach(row => {
+            const date = row.timestamp.toISOString().split('T')[0];
+            if (!dailyStats[date]) {
+                dailyStats[date] = {
+                    requests: 0,
+                    users: new Set(),
+                    models: new Set()
+                };
+            }
+            
+            dailyStats[date].requests += row.requests;
+            dailyStats[date].users.add(row.user);
+            dailyStats[date].models.add(row.model);
+        });
+        
+        // Sort by date (descending)
+        const sortedDates = Object.keys(dailyStats).sort().reverse();
+        
+        tbody.innerHTML = '';
+        sortedDates.forEach(date => {
+            const stats = dailyStats[date];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${new Date(date).toLocaleDateString()}</td>
+                <td>${stats.requests.toLocaleString()}</td>
+                <td>${stats.users.size}</td>
+                <td>${stats.models.size}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        modal.style.display = 'block';
+    }
 
+    showModelDetails() {
+        const modal = document.getElementById('modelModal');
+        const tbody = document.getElementById('modelModalBody');
+        
+        // Calculate model statistics
         const modelStats = {};
         this.filteredData.forEach(row => {
-            modelStats[row.model] = (modelStats[row.model] || 0) + row.requests;
+            if (!modelStats[row.model]) {
+                modelStats[row.model] = {
+                    requests: 0,
+                    users: new Set(),
+                    firstRequest: row.timestamp,
+                    lastRequest: row.timestamp
+                };
+            }
+            
+            modelStats[row.model].requests += row.requests;
+            modelStats[row.model].users.add(row.user);
+            
+            if (row.timestamp < modelStats[row.model].firstRequest) {
+                modelStats[row.model].firstRequest = row.timestamp;
+            }
+            if (row.timestamp > modelStats[row.model].lastRequest) {
+                modelStats[row.model].lastRequest = row.timestamp;
+            }
         });
-
-        const totalRequests = this.filteredData.reduce((sum, row) => sum + row.requests, 0);
+        
+        // Sort by requests (descending)
         const sortedModels = Object.entries(modelStats)
-            .sort(([,a], [,b]) => b - a);
-
+            .sort(([,a], [,b]) => b.requests - a.requests);
+        
         tbody.innerHTML = '';
-        sortedModels.forEach(([model, requests]) => {
-            const percentage = ((requests / totalRequests) * 100).toFixed(1);
+        sortedModels.forEach(([model, stats]) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${model}</td>
-                <td>${requests.toLocaleString()}</td>
-                <td>${percentage}%</td>
+                <td>${stats.requests.toLocaleString()}</td>
+                <td>${stats.users.size}</td>
+                <td>${stats.firstRequest.toLocaleDateString()}</td>
+                <td>${stats.lastRequest.toLocaleDateString()}</td>
             `;
             tbody.appendChild(tr);
         });
+        
+        modal.style.display = 'block';
     }
 
     generateColors(count) {
@@ -879,11 +874,7 @@ class CopilotUsageAnalyzer {
                     totalRequests: 0,
                     monthlyQuota: quota,
                     exceedsQuotaRequests: 0,
-                    timestamps: [],
-                    quotaBreakdown: {
-                        normal: 0,
-                        exceeding: 0
-                    }
+                    timestamps: []
                 };
             }
             
@@ -892,9 +883,6 @@ class CopilotUsageAnalyzer {
             
             if (row.exceedsQuota) {
                 userQuotaData[user].exceedsQuotaRequests += requests;
-                userQuotaData[user].quotaBreakdown.exceeding += requests;
-            } else {
-                userQuotaData[user].quotaBreakdown.normal += requests;
             }
         });
 
@@ -908,8 +896,7 @@ class CopilotUsageAnalyzer {
                 ...userData,
                 usagePercentage: usagePercentage,
                 status: usagePercentage > 100 ? 'Over Quota' : 
-                       usagePercentage > 80 ? 'Near Quota' : 'Normal',
-                remainingQuota: Math.max(0, userData.monthlyQuota - userData.totalRequests)
+                       usagePercentage > 80 ? 'Near Quota' : 'Normal'
             };
         });
 
@@ -972,7 +959,6 @@ class CopilotUsageAnalyzer {
         
         const totalUsers = data.length;
         const totalRequests = data.reduce((sum, row) => sum + row.totalRequests, 0);
-        const totalQuota = data.reduce((sum, row) => sum + row.monthlyQuota, 0);
         const usersOverQuota = data.filter(row => row.usagePercentage > 100).length;
         const averageUsage = totalUsers > 0 
             ? (data.reduce((sum, row) => sum + row.usagePercentage, 0) / totalUsers).toFixed(1)
@@ -980,7 +966,6 @@ class CopilotUsageAnalyzer {
         
         document.getElementById('quotaTotalUsers').textContent = totalUsers.toLocaleString();
         document.getElementById('quotaTotalRequests').textContent = totalRequests.toLocaleString();
-        document.getElementById('quotaTotalQuota').textContent = totalQuota.toLocaleString();
         document.getElementById('quotaExceededUsers').textContent = usersOverQuota.toLocaleString();
         document.getElementById('quotaAverageUsage').textContent = averageUsage + '%';
     }
@@ -988,7 +973,6 @@ class CopilotUsageAnalyzer {
     updateQuotaCharts() {
         this.createQuotaUsageChart();
         this.createQuotaDistributionChart();
-        this.createQuotaBreakdownChart();
         this.createQuotaTimelineChart();
     }
 
@@ -1110,75 +1094,6 @@ class CopilotUsageAnalyzer {
         });
     }
 
-    createQuotaBreakdownChart() {
-        const ctx = document.getElementById('quotaBreakdownChart').getContext('2d');
-        
-        if (this.charts.quotaBreakdown) {
-            this.charts.quotaBreakdown.destroy();
-        }
-        
-        // Get top 10 users by total requests
-        const topUsers = [...this.filteredQuotaData]
-            .sort((a, b) => b.totalRequests - a.totalRequests)
-            .slice(0, 10);
-        
-        const labels = topUsers.map(user => user.user);
-        const normalRequests = topUsers.map(user => user.quotaBreakdown.normal);
-        const exceedingRequests = topUsers.map(user => user.quotaBreakdown.exceeding);
-        
-        this.charts.quotaBreakdown = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Normal Requests',
-                        data: normalRequests,
-                        backgroundColor: '#28a745',
-                        borderColor: '#28a745',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Exceeding Quota',
-                        data: exceedingRequests,
-                        backgroundColor: '#dc3545',
-                        borderColor: '#dc3545',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} requests`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
     createQuotaTimelineChart() {
         const ctx = document.getElementById('quotaTimelineChart').getContext('2d');
         
@@ -1277,7 +1192,6 @@ class CopilotUsageAnalyzer {
                 <td class="${statusClass}">${row.usagePercentage.toFixed(1)}%</td>
                 <td class="${statusClass}">${row.status}</td>
                 <td>${row.exceedsQuotaRequests.toLocaleString()}</td>
-                <td>${row.remainingQuota.toLocaleString()}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -1299,7 +1213,7 @@ class CopilotUsageAnalyzer {
             return;
         }
         
-        const headers = ['User', 'Total Requests', 'Monthly Quota', 'Usage %', 'Status', 'Requests Exceeding Quota', 'Remaining Quota', 'Normal Requests', 'Exceeding Requests'];
+        const headers = ['User', 'Total Requests', 'Monthly Quota', 'Usage %', 'Status', 'Requests Exceeding Quota'];
         const csvContent = [
             headers.join(','),
             ...this.filteredQuotaData.map(row => [
@@ -1308,10 +1222,7 @@ class CopilotUsageAnalyzer {
                 row.monthlyQuota,
                 row.usagePercentage.toFixed(1) + '%',
                 row.status,
-                row.exceedsQuotaRequests,
-                row.remainingQuota,
-                row.quotaBreakdown.normal,
-                row.quotaBreakdown.exceeding
+                row.exceedsQuotaRequests
             ].join(','))
         ].join('\n');
         

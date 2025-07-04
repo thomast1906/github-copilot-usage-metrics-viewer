@@ -23,7 +23,7 @@
                 <h3>Upload Your Data</h3>
                 <p> <a href="https://docs.github.com/en/copilot/managing-copilot/understanding-and-managing-copilot-usage/monitoring-your-copilot-usage-and-entitlements#downloading-a-monthly-usage-report" target="_blank">GitHub Copilot Usage Report Generation Documentation</a></p>
                 <p><strong>Please note:</strong> The usage report currently available for this is Enterprise level.<em>(Will keep reviewing individual accounts until correct data is available)</em></p>
-                <p>Upload your CSV file to analyze GitHub Copilot Premium usage requests metrics.</p>
+                <p>Upload your CSV file to analyze GitHub Copilot Premium usage requests and quota metrics.</p>
                 <p>All data stays in your browser.</p>
                 <input type="file" id="csvFileInput" accept=".csv" class="file-input">
                 <label for="csvFileInput" class="upload-btn">
@@ -36,29 +36,37 @@
         </div>
 
         <div id="dashboard" class="dashboard" style="display: none;">
-            <div class="filters">
-                <div class="filter-group">
-                    <label for="dateRange">Date Range:</label>
-                    <select id="dateRange">
-                        <option value="all">All Time</option>
-                        <option value="7">Last 7 Days</option>
-                        <option value="30">Last 30 Days</option>
-                        <option value="90">Last 90 Days</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="userFilter">User:</label>
-                    <select id="userFilter">
-                        <option value="all">All Users</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="modelFilter">Model:</label>
-                    <select id="modelFilter">
-                        <option value="all">All Models</option>
-                    </select>
-                </div>
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="usage-dashboard">Usage Dashboard</button>
+                <button class="tab-btn" data-tab="quota-dashboard">Monthly Quota Analysis</button>
             </div>
+
+            <!-- Usage Dashboard Tab -->
+            <div id="usage-dashboard" class="tab-content active">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="dateRange">Date Range:</label>
+                        <select id="dateRange">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="userFilter">User:</label>
+                        <select id="userFilter">
+                            <option value="all">All Users</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="modelFilter">Model:</label>
+                        <select id="modelFilter">
+                            <option value="all">All Models</option>
+                        </select>
+                    </div>
+                </div>
 
             <div class="stats-grid">
                 <div class="stat-card clickable" data-modal="users-modal">
@@ -158,6 +166,120 @@
                     </table>
                 </div>
             </div>
+            </div>
+
+            <!-- Monthly Quota Dashboard Tab -->
+            <div id="quota-dashboard" class="tab-content">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="quotaUserFilter">User:</label>
+                        <select id="quotaUserFilter">
+                            <option value="all">All Users</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="quotaDateRange">Date Range:</label>
+                        <select id="quotaDateRange">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaTotalUsers">0</h3>
+                            <p>Total Users with Quota</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaAverageUsage">0%</h3>
+                            <p>Average Quota Usage</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaExceededUsers">0</h3>
+                            <p>Users Over Quota</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaTotalRequests">0</h3>
+                            <p>Total Requests Used</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaTotalQuota">0</h3>
+                            <p>Total Monthly Quota</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card clickable" data-modal="quota-users-modal">
+                        <h3>Quota Usage by User</h3>
+                        <canvas id="quotaUsageChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Quota Usage Distribution</h3>
+                        <canvas id="quotaDistributionChart"></canvas>
+                    </div>
+                    <div class="chart-card clickable" data-modal="quota-breakdown-modal">
+                        <h3>Top Users - Normal vs Exceeding Requests</h3>
+                        <canvas id="quotaBreakdownChart"></canvas>
+                    </div>
+                    <div class="chart-card chart-card-large">
+                        <h3>User Quota Usage Over Time</h3>
+                        <canvas id="quotaTimelineChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="data-table-section">
+                    <h3>User Quota Summary</h3>
+                    <div class="table-controls">
+                        <input type="text" id="quotaSearchInput" placeholder="Search users...">
+                        <button id="quotaExportBtn"><i class="fas fa-download"></i> Export Quota Analysis</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="quotaTable">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Total Requests</th>
+                                    <th>Monthly Quota</th>
+                                    <th>Usage %</th>
+                                    <th>Status</th>
+                                    <th>Requests Exceeding Quota</th>
+                                    <th>Remaining Quota</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotaTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Modal Windows -->
@@ -242,6 +364,49 @@
             <span class="close">&times;</span>
             <div id="modelDistributionDetails">
             </div>
+        </div>
+    </div>
+
+    <!-- Quota Users Modal -->
+    <div id="quota-users-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Quota Usage Details</h3>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Total Requests</th>
+                        <th>Monthly Quota</th>
+                        <th>Usage %</th>
+                        <th>Status</th>
+                        <th>Remaining Quota</th>
+                    </tr>
+                </thead>
+                <tbody id="quotaUsersDetailTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quota Breakdown Modal -->
+    <div id="quota-breakdown-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>User Request Breakdown Details</h3>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Normal Requests</th>
+                        <th>Exceeding Requests</th>
+                        <th>Total Requests</th>
+                        <th>Usage %</th>
+                    </tr>
+                </thead>
+                <tbody id="quotaBreakdownDetailTableBody">
+                </tbody>
+            </table>
         </div>
     </div>
 
