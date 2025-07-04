@@ -23,7 +23,7 @@
                 <h3>Upload Your Data</h3>
                 <p> <a href="https://docs.github.com/en/copilot/managing-copilot/understanding-and-managing-copilot-usage/monitoring-your-copilot-usage-and-entitlements#downloading-a-monthly-usage-report" target="_blank">GitHub Copilot Usage Report Generation Documentation</a></p>
                 <p><strong>Please note:</strong> The usage report currently available for this is Enterprise level.<em>(Will keep reviewing individual accounts until correct data is available)</em></p>
-                <p>Upload your CSV file to analyze GitHub Copilot Premium usage requests metrics.</p>
+                <p>Upload your CSV file to analyze GitHub Copilot Premium usage requests and quota metrics.</p>
                 <p>All data stays in your browser.</p>
                 <input type="file" id="csvFileInput" accept=".csv" class="file-input">
                 <label for="csvFileInput" class="upload-btn">
@@ -36,29 +36,37 @@
         </div>
 
         <div id="dashboard" class="dashboard" style="display: none;">
-            <div class="filters">
-                <div class="filter-group">
-                    <label for="dateRange">Date Range:</label>
-                    <select id="dateRange">
-                        <option value="all">All Time</option>
-                        <option value="7">Last 7 Days</option>
-                        <option value="30">Last 30 Days</option>
-                        <option value="90">Last 90 Days</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="userFilter">User:</label>
-                    <select id="userFilter">
-                        <option value="all">All Users</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="modelFilter">Model:</label>
-                    <select id="modelFilter">
-                        <option value="all">All Models</option>
-                    </select>
-                </div>
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="usage-dashboard">Usage Dashboard</button>
+                <button class="tab-btn" data-tab="quota-dashboard">Monthly Quota Analysis</button>
             </div>
+
+            <!-- Usage Dashboard Tab -->
+            <div id="usage-dashboard" class="tab-content active">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="dateRange">Date Range:</label>
+                        <select id="dateRange">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="userFilter">User:</label>
+                        <select id="userFilter">
+                            <option value="all">All Users</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="modelFilter">Model:</label>
+                        <select id="modelFilter">
+                            <option value="all">All Models</option>
+                        </select>
+                    </div>
+                </div>
 
             <div class="stats-grid">
                 <div class="stat-card clickable" data-modal="users-modal">
@@ -106,6 +114,43 @@
                         <p>Daily Average Requests</p>
                     </div>
                 </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="peakHour">--</h3>
+                        <p>Peak Usage Hour</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="weeklyGrowth">0%</h3>
+                        <p>Weekly Growth Rate</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="mostActiveUser">--</h3>
+                        <p>Most Active User</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="topModel">--</h3>
+                        <p>Top Model</p>
+                    </div>
+                </div>
             </div>
 
             <div class="charts-grid">
@@ -126,12 +171,37 @@
                     <canvas id="userChart"></canvas>
                 </div>
                 <div class="chart-card chart-card-large">
-                    <h3>Model Trends Over Time (Last 30 Days)</h3>
+                    <h3>Model Trends Over Time</h3>
                     <canvas id="modelTrendsChart"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3>Day of Week Usage</h3>
                     <canvas id="dayOfWeekChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Hourly Usage Pattern</h3>
+                    <canvas id="hourlyUsageChart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <h3>User Activity Heatmap</h3>
+                    <canvas id="activityHeatmapChart"></canvas>
+                </div>
+                <div class="chart-card chart-card-large">
+                    <h3>Cumulative Usage Growth</h3>
+                    <canvas id="cumulativeGrowthChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Request Size Distribution</h3>
+                    <canvas id="requestSizeChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>User Efficiency Analysis</h3>
+                    <canvas id="userEfficiencyChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Model Performance Comparison</h3>
+                    <canvas id="modelPerformanceChart"></canvas>
                 </div>
             </div>
 
@@ -158,9 +228,115 @@
                     </table>
                 </div>
             </div>
+            </div>
+
+            <!-- Monthly Quota Dashboard Tab -->
+            <div id="quota-dashboard" class="tab-content">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="quotaUserFilter">User:</label>
+                        <select id="quotaUserFilter">
+                            <option value="all">All Users</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="quotaDateRange">Date Range:</label>
+                        <select id="quotaDateRange">
+                            <option value="all">All Time</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card clickable" data-modal="quota-users-modal">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaTotalUsers">0</h3>
+                            <p>Total Users with Quota</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaAverageUsage">0%</h3>
+                            <p>Average Quota Usage</p>
+                        </div>
+                    </div>
+                    <div class="stat-card clickable" data-modal="quota-near-limit-modal">
+                        <div class="stat-icon">
+                            <i class="fas fa-warning"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaNearLimitUsers">0</h3>
+                            <p>Users Near Limit (80-100%)</p>
+                        </div>
+                    </div>
+                    <div class="stat-card clickable" data-modal="quota-over-limit-modal">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="quotaOverLimitUsers">0</h3>
+                            <p>Users Over Limit (>100%)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card clickable" data-modal="quota-users-modal">
+                        <h3>Quota Usage by User</h3>
+                        <canvas id="quotaUsageChart"></canvas>
+                    </div>
+                    <div class="chart-card clickable" data-modal="quota-distribution-modal">
+                        <h3>Quota Usage Distribution</h3>
+                        <canvas id="quotaDistributionChart"></canvas>
+                    </div>
+                    <div class="chart-card clickable" data-modal="quota-breakdown-modal">
+                        <h3>Request Breakdown by Quota Status</h3>
+                        <canvas id="quotaBreakdownChart"></canvas>
+                    </div>
+                    <div class="chart-card chart-card-large">
+                        <h3>User Quota Usage Over Time</h3>
+                        <canvas id="quotaTimelineChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="data-table-section">
+                    <h3>User Quota Summary</h3>
+                    <div class="table-controls">
+                        <input type="text" id="quotaSearchInput" placeholder="Search users...">
+                        <button id="quotaExportBtn"><i class="fas fa-download"></i> Export Quota Analysis</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="quotaTable">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Total Requests</th>
+                                    <th>Monthly Quota</th>
+                                    <th>Usage %</th>
+                                    <th>Status</th>
+                                    <th>Requests Exceeding Quota</th>
+                                    <th>Remaining Quota</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotaTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Modal Windows -->
+        <!-- Models Modal -->
         <div id="models-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -183,6 +359,30 @@
             </div>
         </div>
 
+        <!-- Users Modal -->
+        <div id="users-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>User Activity Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="usersDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Total Requests</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Distribution Modal -->
         <div id="model-distribution-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -196,53 +396,126 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Models Modal -->
-    <div id="models-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Model Usage Details</h3>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>Model</th>
-                        <th>Requests</th>
-                        <th>Percentage</th>
-                    </tr>
-                </thead>
-                <tbody id="modelsDetailTableBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Users Modal -->
-    <div id="users-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>User Activity Details</h3>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Requests</th>
-                        <th>Percentage</th>
-                    </tr>
-                </thead>
-                <tbody id="usersDetailTableBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Model Distribution Modal -->
-    <div id="model-distribution-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <div id="modelDistributionDetails">
+        <!-- Quota Users Modal -->
+        <div id="quota-users-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Quota Usage Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="quotaUsersDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Total Requests</th>
+                                <th>Monthly Quota</th>
+                                <th>Usage %</th>
+                                <th>Status</th>
+                                <th>Remaining Quota</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotaUsersDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+
+        <!-- Quota Breakdown Modal -->
+        <div id="quota-breakdown-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>User Request Breakdown Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="quotaBreakdownDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Normal Requests</th>
+                                <th>Exceeding Requests</th>
+                                <th>Total Requests</th>
+                                <th>Usage %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotaBreakdownDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quota Distribution Modal -->
+        <div id="quota-distribution-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Quota Distribution Details</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="quotaDistributionDetails">
+                        <p>Click on a segment in the chart to see user details for that quota category.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quota Near Limit Modal -->
+        <div id="quota-near-limit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Users Near Limit (80-100%)</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="quotaNearLimitDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Total Requests</th>
+                                <th>Monthly Quota</th>
+                                <th>Usage %</th>
+                                <th>Status</th>
+                                <th>Remaining Quota</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotaNearLimitDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quota Over Limit Modal -->
+        <div id="quota-over-limit-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Users Over Limit (>100%)</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <table id="quotaOverLimitDetailTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Total Requests</th>
+                                <th>Monthly Quota</th>
+                                <th>Usage %</th>
+                                <th>Requests Over Quota</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotaOverLimitDetailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
     <script src="script.js"></script>

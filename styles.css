@@ -300,6 +300,33 @@ body {
     color: #333;
 }
 
+.modal-body tr:hover {
+    background: #f8f9fa;
+}
+
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.detail-table th,
+.detail-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.detail-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.detail-table tr:hover {
+    background: #f8f9fa;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -344,7 +371,7 @@ body {
     border-color: #667eea;
 }
 
-#exportBtn {
+#exportBtn, #quotaExportBtn {
     padding: 10px 20px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -355,7 +382,7 @@ body {
     transition: transform 0.2s;
 }
 
-#exportBtn:hover {
+#exportBtn:hover, #quotaExportBtn:hover {
     transform: translateY(-2px);
 }
 
@@ -551,4 +578,49 @@ tr:hover {
     .chart-card {
         padding: 15px;
     }
+}
+
+/* Tab Navigation Styles */
+.tab-navigation {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 30px;
+    background: white;
+    padding: 20px 20px 0 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: #f8f9fa;
+    border: none;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.5s ease-in;
 }
