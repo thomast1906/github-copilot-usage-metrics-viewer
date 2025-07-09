@@ -22,7 +22,17 @@ class CopilotUsageAnalyzer {
         this.cacheKey = 'copilot-analyzer-cache';
         this.cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
         
+        // Dashboard settings
+        this.dashboardConfig = {
+            darkMode: false
+        };
+        
+        // Load saved settings if available
+        this.loadSettings();
+        
         this.init();
+        
+        console.log('CopilotUsageAnalyzer initialized');
     }
 
     init() {
@@ -61,8 +71,87 @@ class CopilotUsageAnalyzer {
             }
         });
         
+        // Dark mode toggle
+        document.getElementById('darkModeToggle').addEventListener('change', () => this.toggleDarkMode());
+        
         // Check for cached data on load
         this.checkForCachedData();
+        
+        // Apply dark mode if set in settings
+        if (this.dashboardConfig.darkMode) {
+            document.getElementById('darkModeToggle').checked = true;
+            this.toggleDarkMode();
+        }
+    }
+    
+    loadSettings() {
+        try {
+            const savedConfig = localStorage.getItem('copilot-dashboard-config');
+            if (savedConfig) {
+                this.dashboardConfig = JSON.parse(savedConfig);
+            }
+        } catch (error) {
+            console.error('Error loading dashboard settings:', error);
+        }
+    }
+    
+    saveDashboardConfig() {
+        try {
+            // Save current settings
+            localStorage.setItem('copilot-dashboard-config', JSON.stringify(this.dashboardConfig));
+            this.showNotification('Dashboard configuration saved successfully');
+        } catch (error) {
+            console.error('Error saving dashboard settings:', error);
+            this.showNotification('Failed to save dashboard configuration');
+        }
+    }
+    
+    toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        this.dashboardConfig.darkMode = document.body.classList.contains('dark-mode');
+        
+        // Update charts with new theme colors
+        this.updateChartsTheme();
+        
+        // Save setting
+        localStorage.setItem('copilot-dashboard-config', JSON.stringify(this.dashboardConfig));
+    }
+    
+    updateChartsTheme() {
+        // Update all charts with new theme colors
+        Object.values(this.charts).forEach(chart => {
+            if (chart && typeof chart.update === 'function') {
+                // Update chart colors based on theme
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                
+                // Update grid lines color
+                if (chart.options.scales?.x) {
+                    chart.options.scales.x.grid = {
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    };
+                }
+                
+                if (chart.options.scales?.y) {
+                    chart.options.scales.y.grid = {
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    };
+                    
+                    // Update tick color
+                    chart.options.scales.y.ticks = {
+                        color: isDarkMode ? '#b8b8b8' : '#666'
+                    };
+                }
+                
+                if (chart.options.scales?.x) {
+                    chart.options.scales.x.ticks = {
+                        color: isDarkMode ? '#b8b8b8' : '#666'
+                    };
+                }
+                
+                // Update chart
+                chart.update();
+            }
+        });
     }
     
     checkForCachedData() {
@@ -201,25 +290,33 @@ class CopilotUsageAnalyzer {
     }
 
     async loadSampleData() {
+        // Show loading indicator
+        this.showLoadingIndicator('Loading sample data...');
+        
         try {
+            console.log('Attempting to load sample data from ./data_example.csv');
             const response = await fetch('./data_example.csv');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const csvText = await response.text();
+            console.log('Sample data loaded successfully, length:', csvText.length);
             this.parseCSV(csvText);
         } catch (error) {
             console.error('Error loading sample data:', error);
             // Try without the ./ prefix
             try {
+                console.log('Trying fallback path: data_example.csv');
                 const response = await fetch('data_example.csv');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const csvText = await response.text();
+                console.log('Sample data loaded successfully from fallback path, length:', csvText.length);
                 this.parseCSV(csvText);
             } catch (fallbackError) {
                 console.error('Fallback also failed:', fallbackError);
+                this.hideLoadingIndicator();
                 alert('Error loading sample data. Please upload your own CSV file.');
             }
         }
@@ -228,81 +325,155 @@ class CopilotUsageAnalyzer {
     handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
+        
+        // Show loading indicator
+        this.showLoadingIndicator(`Reading file: ${file.name}`);
+        console.log('Reading uploaded file:', file.name, 'size:', file.size);
 
         const reader = new FileReader();
         reader.onload = (e) => {
+            console.log('File read successfully, length:', e.target.result.length);
             this.parseCSV(e.target.result);
+        };
+        reader.onerror = (e) => {
+            console.error('Error reading file:', e);
+            this.hideLoadingIndicator();
+            alert('Error reading the file. Please try again.');
         };
         reader.readAsText(file);
     }
 
     parseCSV(csvText) {
+        if (!csvText || csvText.trim() === '') {
+            console.error('Empty CSV data received');
+            this.hideLoadingIndicator();
+            alert('The CSV file appears to be empty. Please check the file and try again.');
+            return;
+        }
+        
+        console.log('Starting CSV parsing...');
         const lines = csvText.trim().split('\n');
-        const headers = this.parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
+        console.log('CSV lines count:', lines.length);
         
-        this.rawData = [];
-        this.processingComplete = false;
+        if (lines.length < 2) {
+            console.error('CSV has too few lines:', lines.length);
+            this.hideLoadingIndicator();
+            alert('The CSV file does not contain enough data. Please check the format.');
+            return;
+        }
         
-        // Show loading indicator
-        this.showLoadingIndicator('Parsing CSV data...');
-        
-        // Use chunked processing for large files
-        this.processCSVChunks(lines, headers, 1);
+        try {
+            const headers = this.parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
+            console.log('CSV headers:', headers);
+            
+            this.rawData = [];
+            this.processingComplete = false;
+            
+            // Show loading indicator
+            this.showLoadingIndicator('Parsing CSV data...');
+            
+            // Use chunked processing for large files
+            this.processCSVChunks(lines, headers, 1);
+        } catch (error) {
+            console.error('Error parsing CSV:', error);
+            this.hideLoadingIndicator();
+            alert('Error parsing the CSV file. Please check the format and try again.');
+        }
     }
     
     processCSVChunks(lines, headers, startIndex) {
-        // Process a chunk of the CSV data
-        const endIndex = Math.min(startIndex + this.chunkSize, lines.length);
-        
-        // Update loading progress
-        const progress = Math.floor((startIndex / lines.length) * 100);
-        this.updateLoadingProgress(progress);
-        
-        // Process this chunk
-        for (let i = startIndex; i < endIndex; i++) {
-            const values = this.parseCSVLine(lines[i]).map(v => v.trim().replace(/^"|"$/g, ''));
-            if (values.length === headers.length) {
-                const row = {};
-                headers.forEach((header, index) => {
-                    row[header] = values[index];
-                });
-                
-                // Parse the data with correct field mapping
-                const timestamp = new Date(row.Timestamp);
-                if (!isNaN(timestamp.getTime()) && row.User && row.Model) {
-                    this.rawData.push({
-                        timestamp: timestamp,
-                        user: row.User,
-                        model: row.Model,
-                        requests: parseFloat(row['Requests Used']) || 1,
-                        exceedsQuota: row['Exceeds Monthly Quota'] === 'TRUE' || row['Exceeds Monthly Quota'] === 'True',
-                        quota: parseInt(row['Total Monthly Quota']) || 300,
-                        // Keep original data for export
-                        originalData: row
-                    });
+        try {
+            // Process a chunk of the CSV data
+            const endIndex = Math.min(startIndex + this.chunkSize, lines.length);
+            
+            // Update loading progress
+            const progress = Math.floor((startIndex / lines.length) * 100);
+            this.updateLoadingProgress(progress);
+            
+            console.log(`Processing CSV chunk: ${startIndex} to ${endIndex} (${progress}%)`);
+            
+            // Debug first few headers
+            if (startIndex === 1) {
+                console.log('Headers detected:', headers);
+                // Check if we have the expected headers
+                const requiredHeaders = ['Timestamp', 'User', 'Model', 'Requests Used', 'Exceeds Monthly Quota', 'Total Monthly Quota'];
+                const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+                if (missingHeaders.length > 0) {
+                    console.warn('Missing required headers:', missingHeaders);
                 }
             }
-        }
-        
-        // If there are more chunks to process, schedule the next chunk
-        if (endIndex < lines.length) {
-            setTimeout(() => {
-                this.processCSVChunks(lines, headers, endIndex);
-            }, 0); // Use setTimeout to avoid blocking the UI
-        } else {
-            // All chunks processed
-            this.hideLoadingIndicator();
             
-            if (this.rawData.length === 0) {
-                alert('No valid data found in the CSV file. Please check the format.');
-                return;
+            // Process this chunk
+            for (let i = startIndex; i < endIndex; i++) {
+                try {
+                    const values = this.parseCSVLine(lines[i]).map(v => v.trim().replace(/^"|"$/g, ''));
+                    
+                    if (values.length === headers.length) {
+                        const row = {};
+                        headers.forEach((header, index) => {
+                            row[header] = values[index];
+                        });
+                        
+                        // Debug first few rows
+                        if (i < 5) {
+                            console.log(`Row ${i} data:`, row);
+                        }
+                        
+                        // Parse the data with correct field mapping
+                        const timestamp = new Date(row.Timestamp);
+                        if (!isNaN(timestamp.getTime()) && row.User && row.Model) {
+                            this.rawData.push({
+                                timestamp: timestamp,
+                                user: row.User,
+                                model: row.Model,
+                                requests: parseFloat(row['Requests Used']) || 1,
+                                exceedsQuota: row['Exceeds Monthly Quota'] === 'TRUE' || row['Exceeds Monthly Quota'] === 'True',
+                                quota: parseInt(row['Total Monthly Quota']) || 300,
+                                // Keep original data for export
+                                originalData: row
+                            });
+                        } else {
+                            console.warn(`Skipping row ${i} due to invalid data:`, 
+                                        `timestamp valid: ${!isNaN(timestamp.getTime())}, `,
+                                        `user: ${row.User}, model: ${row.Model}`);
+                        }
+                    } else {
+                        console.warn(`Skipping row ${i} due to column count mismatch. Expected ${headers.length}, got ${values.length}`);
+                        if (i < 10) {
+                            console.log(`Row ${i} content:`, lines[i]);
+                        }
+                    }
+                } catch (rowError) {
+                    console.error(`Error processing row ${i}:`, rowError);
+                    // Continue with next row
+                }
             }
             
-            // Save to cache
-            this.cacheRawData();
-            
-            this.processingComplete = true;
-            this.processData();
+            // If there are more chunks to process, schedule the next chunk
+            if (endIndex < lines.length) {
+                setTimeout(() => {
+                    this.processCSVChunks(lines, headers, endIndex);
+                }, 0); // Use setTimeout to avoid blocking the UI
+            } else {
+                // All chunks processed
+                console.log('CSV processing complete. Total rows processed:', this.rawData.length);
+                this.hideLoadingIndicator();
+                
+                if (this.rawData.length === 0) {
+                    alert('No valid data found in the CSV file. Please check the format.');
+                    return;
+                }
+                
+                // Save to cache
+                this.cacheRawData();
+                
+                this.processingComplete = true;
+                this.processData();
+            }
+        } catch (error) {
+            console.error('Error in processCSVChunks:', error);
+            this.hideLoadingIndicator();
+            alert('Error processing the CSV data. Please check the console for details.');
         }
     }
     
@@ -409,6 +580,11 @@ class CopilotUsageAnalyzer {
     }
 
     parseCSVLine(line) {
+        // Handle UTF-8 BOM character that might be present at the start of the file
+        if (line.charCodeAt(0) === 0xFEFF) {
+            line = line.slice(1);
+        }
+        
         const result = [];
         let current = '';
         let inQuotes = false;
@@ -433,6 +609,8 @@ class CopilotUsageAnalyzer {
     processData() {
         if (this.rawData.length === 0) return;
         
+        console.log('Processing data with', this.rawData.length, 'records');
+        
         // Sort data by timestamp
         this.rawData.sort((a, b) => a.timestamp - b.timestamp);
         
@@ -441,9 +619,6 @@ class CopilotUsageAnalyzer {
         
         // Process quota data
         this.processQuotaData();
-        
-        // Add data aggregation options
-        this.addAggregationOptions();
         
         // Apply initial filters
         this.applyFilters();
@@ -454,263 +629,829 @@ class CopilotUsageAnalyzer {
         document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
     }
     
-    addAggregationOptions() {
-        // Create aggregation options container if it doesn't exist
-        let aggregationContainer = document.querySelector('.aggregation-options');
-        if (!aggregationContainer) {
-            aggregationContainer = document.createElement('div');
-            aggregationContainer.className = 'aggregation-options';
+    createSummaryDashboard() {
+        try {
+            // Check if we have data to display
+            if (!this.rawData || this.rawData.length === 0) {
+                console.log('No data available for summary dashboard');
+                return;
+            }
             
-            // Add it after the filters
-            const filtersContainer = document.querySelector('.filters');
-            if (filtersContainer) {
-                filtersContainer.insertAdjacentElement('afterend', aggregationContainer);
+            console.log('Creating summary dashboard with', this.rawData.length, 'records');
+            
+            // Create trend charts
+            this.createTrendCharts();
+            
+            // Create activity heatmap
+            this.createActivityHeatmapFull();
+            
+            // Create model comparison chart
+            this.createModelComparisonChart();
+            
+            // Create usage pattern charts
+            this.createUsagePatternCharts();
+        } catch (error) {
+            console.error('Error creating summary dashboard:', error);
+        }
+    }
+    
+    createTrendCharts() {
+        try {
+            console.log('Creating trend charts with data:', this.filteredData.length);
+            
+            // Calculate trend data for different periods
+            const trendData = this.calculateTrendData();
+            console.log('Trend data calculated:', trendData);
+            
+            // Update trend values and indicators
+            this.updateTrendValues(trendData);
+            
+            // Create mini trend charts
+            this.createMiniTrendChart('totalRequestsTrendChart', trendData.totalRequests);
+            this.createMiniTrendChart('activeUsersTrendChart', trendData.activeUsers);
+            this.createMiniTrendChart('avgRequestsTrendChart', trendData.avgRequests);
+        } catch (error) {
+            console.error('Error creating trend charts:', error);
+        }
+    }
+    
+    calculateTrendData() {
+        // Get sorted data by timestamp - use filtered data instead of raw data
+        const sortedData = [...this.filteredData].sort((a, b) => a.timestamp - b.timestamp);
+        console.log('Calculating trends with', sortedData.length, 'records');
+        if (sortedData.length === 0) return { totalRequests: [], activeUsers: [], avgRequests: [] };
+        
+        // Get date ranges
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+        const oneQuarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        const twoQuartersAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        
+        // Calculate weekly trend data
+        const currentWeekData = sortedData.filter(row => row.timestamp >= oneWeekAgo);
+        const previousWeekData = sortedData.filter(row => row.timestamp >= twoWeeksAgo && row.timestamp < oneWeekAgo);
+        
+        const currentWeekRequests = currentWeekData.reduce((sum, row) => sum + row.requests, 0);
+        const previousWeekRequests = previousWeekData.reduce((sum, row) => sum + row.requests, 0);
+        
+        const currentWeekUsers = new Set(currentWeekData.map(row => row.user)).size;
+        const previousWeekUsers = new Set(previousWeekData.map(row => row.user)).size;
+        
+        const currentWeekAvgRequests = currentWeekUsers > 0 ? currentWeekRequests / currentWeekUsers : 0;
+        const previousWeekAvgRequests = previousWeekUsers > 0 ? previousWeekRequests / previousWeekUsers : 0;
+        
+        // Calculate monthly trend data
+        const currentMonthData = sortedData.filter(row => row.timestamp >= oneMonthAgo);
+        const previousMonthData = sortedData.filter(row => row.timestamp >= twoMonthsAgo && row.timestamp < oneMonthAgo);
+        
+        const currentMonthRequests = currentMonthData.reduce((sum, row) => sum + row.requests, 0);
+        const previousMonthRequests = previousMonthData.reduce((sum, row) => sum + row.requests, 0);
+        
+        const currentMonthUsers = new Set(currentMonthData.map(row => row.user)).size;
+        const previousMonthUsers = new Set(previousMonthData.map(row => row.user)).size;
+        
+        const currentMonthAvgRequests = currentMonthUsers > 0 ? currentMonthRequests / currentMonthUsers : 0;
+        const previousMonthAvgRequests = previousMonthUsers > 0 ? previousMonthRequests / previousMonthUsers : 0;
+        
+        // Calculate quarterly trend data
+        const currentQuarterData = sortedData.filter(row => row.timestamp >= oneQuarterAgo);
+        const previousQuarterData = sortedData.filter(row => row.timestamp >= twoQuartersAgo && row.timestamp < oneQuarterAgo);
+        
+        const currentQuarterRequests = currentQuarterData.reduce((sum, row) => sum + row.requests, 0);
+        const previousQuarterRequests = previousQuarterData.reduce((sum, row) => sum + row.requests, 0);
+        
+        const currentQuarterUsers = new Set(currentQuarterData.map(row => row.user)).size;
+        const previousQuarterUsers = new Set(previousQuarterData.map(row => row.user)).size;
+        
+        const currentQuarterAvgRequests = currentQuarterUsers > 0 ? currentQuarterRequests / currentQuarterUsers : 0;
+        const previousQuarterAvgRequests = previousQuarterUsers > 0 ? previousQuarterRequests / previousQuarterUsers : 0;
+        
+        // Calculate daily data for charts
+        const dailyData = this.calculateDailyData(sortedData, 30); // Last 30 days
+        
+        return {
+            week: {
+                totalRequests: { current: currentWeekRequests, previous: previousWeekRequests },
+                activeUsers: { current: currentWeekUsers, previous: previousWeekUsers },
+                avgRequests: { current: currentWeekAvgRequests, previous: previousWeekAvgRequests }
+            },
+            month: {
+                totalRequests: { current: currentMonthRequests, previous: previousMonthRequests },
+                activeUsers: { current: currentMonthUsers, previous: previousMonthUsers },
+                avgRequests: { current: currentMonthAvgRequests, previous: previousMonthAvgRequests }
+            },
+            quarter: {
+                totalRequests: { current: currentQuarterRequests, previous: previousQuarterRequests },
+                activeUsers: { current: currentQuarterUsers, previous: previousQuarterUsers },
+                avgRequests: { current: currentQuarterAvgRequests, previous: previousQuarterAvgRequests }
+            },
+            totalRequests: dailyData.totalRequests,
+            activeUsers: dailyData.activeUsers,
+            avgRequests: dailyData.avgRequests
+        };
+    }
+    
+    calculateDailyData(data, days) {
+        // Get date range
+        const now = new Date();
+        const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        
+        // Initialize arrays
+        const totalRequests = [];
+        const activeUsers = [];
+        const avgRequests = [];
+        
+        // Create a date for each day in the range
+        for (let i = 0; i <= days; i++) {
+            const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            // Filter data for this day
+            const dayData = data.filter(row => {
+                const rowDate = row.timestamp.toISOString().split('T')[0];
+                return rowDate === dateStr;
+            });
+            
+            // Calculate metrics
+            const dayRequests = dayData.reduce((sum, row) => sum + row.requests, 0);
+            const uniqueUsers = new Set(dayData.map(row => row.user)).size;
+            const avgRequestsPerUser = uniqueUsers > 0 ? dayRequests / uniqueUsers : 0;
+            
+            // Add to arrays
+            totalRequests.push({ x: dateStr, y: dayRequests });
+            activeUsers.push({ x: dateStr, y: uniqueUsers });
+            avgRequests.push({ x: dateStr, y: avgRequestsPerUser });
+        }
+        
+        return { totalRequests, activeUsers, avgRequests };
+    }
+    
+    updateTrendValues(trendData) {
+        // Get current period (default to week)
+        const period = this.dashboardConfig.trendPeriod || 'week';
+        const data = trendData[period];
+        
+        // Update total requests trend
+        document.getElementById('totalRequestsTrend').textContent = data.totalRequests.current.toLocaleString();
+        const totalRequestsChange = data.totalRequests.previous > 0 
+            ? ((data.totalRequests.current - data.totalRequests.previous) / data.totalRequests.previous * 100).toFixed(1)
+            : 0;
+        document.getElementById('totalRequestsChange').textContent = `${totalRequestsChange}%`;
+        document.getElementById('totalRequestsChange').parentNode.querySelector('.trend-indicator i').className = 
+            totalRequestsChange >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+        
+        // Update active users trend
+        document.getElementById('activeUsersTrend').textContent = data.activeUsers.current.toLocaleString();
+        const activeUsersChange = data.activeUsers.previous > 0 
+            ? ((data.activeUsers.current - data.activeUsers.previous) / data.activeUsers.previous * 100).toFixed(1)
+            : 0;
+        document.getElementById('activeUsersChange').textContent = `${activeUsersChange}%`;
+        document.getElementById('activeUsersChange').parentNode.querySelector('.trend-indicator i').className = 
+            activeUsersChange >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+        
+        // Update avg requests trend
+        document.getElementById('avgRequestsTrend').textContent = data.avgRequests.current.toFixed(1);
+        const avgRequestsChange = data.avgRequests.previous > 0 
+            ? ((data.avgRequests.current - data.avgRequests.previous) / data.avgRequests.previous * 100).toFixed(1)
+            : 0;
+        document.getElementById('avgRequestsChange').textContent = `${avgRequestsChange}%`;
+        document.getElementById('avgRequestsChange').parentNode.querySelector('.trend-indicator i').className = 
+            avgRequestsChange >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+    }
+    
+    createMiniTrendChart(chartId, data) {
+        const ctx = document.getElementById(chartId);
+        if (!ctx) {
+            console.error(`Canvas element with ID ${chartId} not found`);
+            return;
+        }
+        
+        const context = ctx.getContext('2d');
+        
+        if (this.charts[chartId]) {
+            this.charts[chartId].destroy();
+        }
+        
+        console.log(`Creating mini trend chart ${chartId} with ${data.length} data points`);
+        if (data.length === 0) {
+            console.warn(`No data for chart ${chartId}`);
+        }
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        // Create a simple dataset if we don't have data
+        const chartData = data.length > 0 ? data : [
+            { x: '2023-01-01', y: 0 },
+            { x: '2023-01-02', y: 0 }
+        ];
+        
+        try {
+            this.charts[chartId] = new Chart(context, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        data: chartData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM d'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                display: false
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        }
+                    }
+                }
+            });
+            
+            console.log(`Chart ${chartId} created successfully`);
+        } catch (error) {
+            console.error(`Error creating chart ${chartId}:`, error);
+        }
+    }
+    
+    updateTrendChart(chartId, period) {
+        // Update the trend period
+        this.dashboardConfig.trendPeriod = period;
+        
+        // Recalculate trend data
+        const trendData = this.calculateTrendData();
+        
+        // Update trend values and indicators
+        this.updateTrendValues(trendData);
+        
+        // Save setting
+        localStorage.setItem('copilot-dashboard-config', JSON.stringify(this.dashboardConfig));
+    }
+    
+    createActivityHeatmapFull() {
+        const ctx = document.getElementById('activityHeatmapFull').getContext('2d');
+        
+        if (this.charts.activityHeatmapFull) {
+            this.charts.activityHeatmapFull.destroy();
+        }
+        
+        // Create day vs hour heatmap data
+        const heatmapData = [];
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const hourLabels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        
+        // Initialize the data structure
+        for (let day = 0; day < 7; day++) {
+            for (let hour = 0; hour < 24; hour++) {
+                heatmapData.push({
+                    x: hour,
+                    y: day,
+                    v: 0 // Value (request count)
+                });
             }
         }
         
-        // Set content
-        aggregationContainer.innerHTML = `
-            <div class="aggregation-header">
-                <h3>Data Aggregation</h3>
-                <p>Optimize performance by aggregating data</p>
-            </div>
-            <div class="aggregation-controls">
-                <div class="aggregation-group">
-                    <label for="timeAggregation">Time Grouping:</label>
-                    <select id="timeAggregation">
-                        <option value="none">No Grouping</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div class="aggregation-group">
-                    <label for="dataLimit">Data Points Limit:</label>
-                    <select id="dataLimit">
-                        <option value="0">No Limit</option>
-                        <option value="100">100 Points</option>
-                        <option value="500">500 Points</option>
-                        <option value="1000">1000 Points</option>
-                    </select>
-                </div>
-                <button id="applyAggregation" class="aggregation-btn">
-                    Apply Aggregation
-                </button>
-            </div>
-        `;
-        
-        // Add styles
-        if (!document.getElementById('aggregation-styles')) {
-            const style = document.createElement('style');
-            style.id = 'aggregation-styles';
-            style.textContent = `
-                .aggregation-options {
-                    background: white;
-                    padding: 20px;
-                    border-radius: 15px;
-                    margin-bottom: 30px;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                }
-                
-                .aggregation-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    flex-wrap: wrap;
-                    gap: 10px;
-                }
-                
-                .aggregation-header h3 {
-                    margin: 0;
-                    color: #333;
-                    font-size: 1.2rem;
-                }
-                
-                .aggregation-header p {
-                    margin: 0;
-                    color: #666;
-                    font-size: 0.9rem;
-                }
-                
-                .aggregation-controls {
-                    display: flex;
-                    gap: 20px;
-                    flex-wrap: wrap;
-                    align-items: flex-end;
-                }
-                
-                .aggregation-group {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 5px;
-                }
-                
-                .aggregation-group label {
-                    font-weight: 500;
-                    color: #333;
-                }
-                
-                .aggregation-group select {
-                    padding: 8px 12px;
-                    border: 2px solid #e1e1e1;
-                    border-radius: 8px;
-                    background: white;
-                    cursor: pointer;
-                    min-width: 150px;
-                }
-                
-                .aggregation-btn {
-                    padding: 8px 16px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: 500;
-                    height: 37px;
-                }
-                
-                .aggregation-btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-                }
-                
-                @media (max-width: 768px) {
-                    .aggregation-controls {
-                        flex-direction: column;
-                        align-items: stretch;
-                    }
-                    
-                    .aggregation-btn {
-                        margin-top: 10px;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        // Add event listeners
-        document.getElementById('applyAggregation').addEventListener('click', () => this.applyDataAggregation());
-    }
-    
-    applyDataAggregation() {
-        const timeAggregation = document.getElementById('timeAggregation').value;
-        const dataLimit = parseInt(document.getElementById('dataLimit').value);
-        
-        // Show loading indicator
-        this.showLoadingIndicator('Applying data aggregation...');
-        
-        // Use setTimeout to avoid blocking UI
-        setTimeout(() => {
-            // Apply aggregation based on selected options
-            if (timeAggregation !== 'none') {
-                this.aggregateDataByTime(timeAggregation);
-            }
-            
-            // Apply data point limiting if needed
-            if (dataLimit > 0) {
-                this.limitDataPoints(dataLimit);
-            }
-            
-            // Hide loading indicator
-            this.hideLoadingIndicator();
-            
-            // Update dashboard with aggregated data
-            this.applyFilters();
-            this.applyQuotaFilters();
-            
-            // Show notification
-            this.showNotification('Data aggregation applied successfully');
-        }, 100);
-    }
-    
-    aggregateDataByTime(timeAggregation) {
-        // Create a copy of the original data
-        const originalData = [...this.rawData];
-        
-        // Group data by the selected time period
-        const groupedData = {};
-        
-        originalData.forEach(row => {
-            let timeKey;
-            const date = row.timestamp;
-            
-            if (timeAggregation === 'daily') {
-                // Group by day: YYYY-MM-DD
-                timeKey = date.toISOString().split('T')[0];
-            } else if (timeAggregation === 'weekly') {
-                // Group by week: YYYY-WW (year and week number)
-                const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-                const weekNumber = Math.ceil(((date - firstDayOfYear) / 86400000 + firstDayOfYear.getDay() + 1) / 7);
-                timeKey = `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
-            } else if (timeAggregation === 'monthly') {
-                // Group by month: YYYY-MM
-                timeKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-            }
-            
-            // Create group key combining time, user and model
-            const groupKey = `${timeKey}|${row.user}|${row.model}`;
-            
-            if (!groupedData[groupKey]) {
-                groupedData[groupKey] = {
-                    timestamp: new Date(timeKey.includes('W') 
-                        ? this.getDateOfWeek(parseInt(timeKey.split('-W')[1]), parseInt(timeKey.split('-')[0]))
-                        : timeKey),
-                    user: row.user,
-                    model: row.model,
-                    requests: 0,
-                    exceedsQuota: false,
-                    quota: row.quota,
-                    originalData: row.originalData
-                };
-            }
-            
-            // Sum requests
-            groupedData[groupKey].requests += row.requests;
-            
-            // If any row exceeds quota, mark the group as exceeding
-            if (row.exceedsQuota) {
-                groupedData[groupKey].exceedsQuota = true;
+        // Populate with actual data
+        this.filteredData.forEach(row => {
+            const day = row.timestamp.getDay();
+            const hour = row.timestamp.getHours();
+            const index = day * 24 + hour;
+            if (index < heatmapData.length) {
+                heatmapData[index].v += row.requests;
             }
         });
         
-        // Convert back to array
-        this.rawData = Object.values(groupedData);
+        // Find max value for color scaling
+        const maxValue = Math.max(...heatmapData.map(d => d.v));
         
-        // Recalculate quota data
-        this.processQuotaData();
+        // Create color scale
+        const getColor = (value) => {
+            const intensity = maxValue > 0 ? value / maxValue : 0;
+            return `rgba(102, 126, 234, ${intensity.toFixed(2)})`;
+        };
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        this.charts.activityHeatmapFull = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    data: heatmapData.map(d => ({
+                        x: d.x,
+                        y: d.y,
+                        value: d.v
+                    })),
+                    backgroundColor: heatmapData.map(d => getColor(d.v)),
+                    pointRadius: 15,
+                    pointHoverRadius: 18
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const point = context.raw;
+                                return `${dayNames[point.y]} at ${hourLabels[point.x]}: ${point.value.toLocaleString()} requests`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: -0.5,
+                        max: 23.5,
+                        ticks: {
+                            callback: function(value) {
+                                return hourLabels[value];
+                            },
+                            color: textColor,
+                            maxRotation: 0,
+                            autoSkip: true,
+                            autoSkipPadding: 20
+                        },
+                        grid: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Hour of Day',
+                            color: textColor
+                        }
+                    },
+                    y: {
+                        min: -0.5,
+                        max: 6.5,
+                        ticks: {
+                            callback: function(value) {
+                                return dayNames[value];
+                            },
+                            color: textColor
+                        },
+                        grid: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Day of Week',
+                            color: textColor
+                        }
+                    }
+                }
+            }
+        });
     }
     
-    getDateOfWeek(weekNumber, year) {
-        // Get the first day of the year
-        const firstDayOfYear = new Date(year, 0, 1);
+    createModelComparisonChart() {
+        const ctx = document.getElementById('modelComparisonChart').getContext('2d');
         
-        // Get the first Monday of the year
-        const firstMonday = new Date(year, 0, 1 + (8 - firstDayOfYear.getDay()) % 7);
-        
-        // Add the weeks
-        const targetDate = new Date(firstMonday);
-        targetDate.setDate(firstMonday.getDate() + (weekNumber - 1) * 7);
-        
-        return targetDate;
-    }
-    
-    limitDataPoints(limit) {
-        if (this.rawData.length <= limit) {
-            return; // No need to limit
+        if (this.charts.modelComparisonChart) {
+            this.charts.modelComparisonChart.destroy();
         }
         
-        // Sort by timestamp (newest first)
-        this.rawData.sort((a, b) => b.timestamp - a.timestamp);
+        // Calculate model efficiency metrics
+        const modelStats = {};
+        this.filteredData.forEach(row => {
+            if (!modelStats[row.model]) {
+                modelStats[row.model] = {
+                    totalRequests: 0,
+                    uniqueUsers: new Set(),
+                    totalDays: new Set()
+                };
+            }
+            modelStats[row.model].totalRequests += row.requests;
+            modelStats[row.model].uniqueUsers.add(row.user);
+            modelStats[row.model].totalDays.add(row.timestamp.toISOString().split('T')[0]);
+        });
         
-        // Get the most recent data points up to the limit
-        this.rawData = this.rawData.slice(0, limit);
+        // Calculate efficiency metrics
+        const modelEfficiency = Object.entries(modelStats)
+            .map(([model, stats]) => {
+                const usersCount = stats.uniqueUsers.size;
+                const daysCount = stats.totalDays.size;
+                return {
+                    model,
+                    requests: stats.totalRequests,
+                    users: usersCount,
+                    requestsPerUser: usersCount > 0 ? stats.totalRequests / usersCount : 0,
+                    requestsPerDay: daysCount > 0 ? stats.totalRequests / daysCount : 0,
+                    usageScore: (usersCount * stats.totalRequests) / (daysCount || 1)
+                };
+            })
+            .sort((a, b) => b.usageScore - a.usageScore)
+            .slice(0, 8); // Top 8 models
         
-        // Recalculate quota data
-        this.processQuotaData();
+        const labels = modelEfficiency.map(m => m.model);
+        const requestsPerUser = modelEfficiency.map(m => m.requestsPerUser);
+        const requestsPerDay = modelEfficiency.map(m => m.requestsPerDay);
+        const totalRequests = modelEfficiency.map(m => m.requests);
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        this.charts.modelComparisonChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Requests per User',
+                        data: requestsPerUser,
+                        backgroundColor: '#667eea',
+                        borderColor: '#667eea',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Requests per Day',
+                        data: requestsPerDay,
+                        backgroundColor: '#764ba2',
+                        borderColor: '#764ba2',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Total Requests',
+                        data: totalRequests,
+                        type: 'line',
+                        borderColor: '#fd7e14',
+                        backgroundColor: 'rgba(253, 126, 20, 0.2)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: textColor
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: textColor,
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Efficiency Metrics',
+                            color: textColor
+                        },
+                        ticks: {
+                            color: textColor
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Total Requests',
+                            color: textColor
+                        },
+                        ticks: {
+                            color: textColor
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    createUsagePatternCharts() {
+        this.createDailyDistributionChart();
+        this.createHourlyDistributionChart();
+        this.createTopModelsChart();
+        this.createTopUsersChart();
+    }
+    
+    createDailyDistributionChart() {
+        const ctx = document.getElementById('dailyDistributionChart').getContext('2d');
+        
+        if (this.charts.dailyDistributionChart) {
+            this.charts.dailyDistributionChart.destroy();
+        }
+        
+        // Group data by day of week
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayData = new Array(7).fill(0);
+        
+        this.filteredData.forEach(row => {
+            const dayOfWeek = row.timestamp.getDay();
+            dayData[dayOfWeek] += row.requests;
+        });
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        this.charts.dailyDistributionChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dayNames,
+                datasets: [{
+                    label: 'Requests',
+                    data: dayData,
+                    backgroundColor: '#4285f4',
+                    borderColor: '#4285f4',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: textColor
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: textColor
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    createHourlyDistributionChart() {
+        const ctx = document.getElementById('hourlyDistributionChart').getContext('2d');
+        
+        if (this.charts.hourlyDistributionChart) {
+            this.charts.hourlyDistributionChart.destroy();
+        }
+        
+        // Group data by hour
+        const hourData = new Array(24).fill(0);
+        
+        this.filteredData.forEach(row => {
+            const hour = row.timestamp.getHours();
+            hourData[hour] += row.requests;
+        });
+        
+        const labels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        this.charts.hourlyDistributionChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Requests',
+                    data: hourData,
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: textColor
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: textColor,
+                            maxRotation: 45,
+                            minRotation: 45,
+                            autoSkip: true,
+                            autoSkipPadding: 10
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    createTopModelsChart() {
+        const ctx = document.getElementById('topModelsChart').getContext('2d');
+        
+        if (this.charts.topModelsChart) {
+            this.charts.topModelsChart.destroy();
+        }
+        
+        // Group data by model
+        const modelData = {};
+        this.filteredData.forEach(row => {
+            modelData[row.model] = (modelData[row.model] || 0) + row.requests;
+        });
+        
+        const sortedModels = Object.entries(modelData)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5);
+        
+        const labels = sortedModels.map(([model]) => model);
+        const values = sortedModels.map(([, count]) => count);
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        this.charts.topModelsChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: this.generateColors(labels.length),
+                    borderWidth: 2,
+                    borderColor: isDarkMode ? '#2a2d3e' : '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: textColor,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    createTopUsersChart() {
+        const ctx = document.getElementById('topUsersChart').getContext('2d');
+        
+        if (this.charts.topUsersChart) {
+            this.charts.topUsersChart.destroy();
+        }
+        
+        // Group data by user
+        const userData = {};
+        this.filteredData.forEach(row => {
+            userData[row.user] = (userData[row.user] || 0) + row.requests;
+        });
+        
+        const sortedUsers = Object.entries(userData)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5);
+        
+        const labels = sortedUsers.map(([user]) => user);
+        const values = sortedUsers.map(([, count]) => count);
+        
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#b8b8b8' : '#666';
+        
+        this.charts.topUsersChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Requests',
+                    data: values,
+                    backgroundColor: '#f093fb',
+                    borderColor: '#f093fb',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: textColor
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: textColor
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Removed data aggregation options
+    addAggregationOptions() {
+        // Function kept for compatibility but no longer used
+        return;
+    }
+    
+    // Removed data aggregation functionality
+    applyDataAggregation() {
+        return;
+    }
+    
+    // Removed data aggregation functionality
+    aggregateDataByTime(timeAggregation) {
+        return;
+    }
+    
+    // Removed data aggregation functionality
+    getDateOfWeek(weekNumber, year) {
+        return new Date();
+    }
+    
+    // Removed data aggregation functionality
+    limitDataPoints(limit) {
+        return;
     }
 
     populateFilters() {
@@ -740,9 +1481,13 @@ class CopilotUsageAnalyzer {
     }
 
     applyFilters() {
+        console.log('Applying filters to', this.rawData.length, 'records');
+        
         const dateRange = document.getElementById('dateRange').value;
         const userFilter = document.getElementById('userFilter').value;
         const modelFilter = document.getElementById('modelFilter').value;
+        
+        console.log('Filters:', { dateRange, userFilter, modelFilter });
         
         let filtered = [...this.rawData];
         
@@ -752,23 +1497,29 @@ class CopilotUsageAnalyzer {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - days);
             filtered = filtered.filter(row => row.timestamp >= cutoffDate);
+            console.log(`Date filter applied (${days} days): ${filtered.length} records remaining`);
         }
         
         // User filter
         if (userFilter !== 'all') {
             filtered = filtered.filter(row => row.user === userFilter);
+            console.log(`User filter applied (${userFilter}): ${filtered.length} records remaining`);
         }
         
         // Model filter
         if (modelFilter !== 'all') {
             filtered = filtered.filter(row => row.model === modelFilter);
+            console.log(`Model filter applied (${modelFilter}): ${filtered.length} records remaining`);
         }
         
         this.filteredData = filtered;
+        console.log('Filtered data:', this.filteredData.length, 'records');
+        
         this.updateDashboard();
     }
 
     updateDashboard() {
+        console.log('Updating dashboard with', this.filteredData.length, 'records');
         this.updateStatCards();
         this.updateCharts();
         this.updateTable();
@@ -2062,6 +2813,8 @@ class CopilotUsageAnalyzer {
     }
 
     switchTab(tabId) {
+        console.log('Switching to tab:', tabId);
+        
         // Update active tab button
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
@@ -2077,13 +2830,12 @@ class CopilotUsageAnalyzer {
         this.currentTab = tabId;
 
         // Update charts when switching tabs
-        setTimeout(() => {
-            if (tabId === 'quota-dashboard') {
-                this.updateQuotaDashboard();
-            } else {
-                this.updateDashboard();
-            }
-        }, 100);
+        console.log('Refreshing data for tab:', tabId);
+        if (tabId === 'quota-dashboard') {
+            this.updateQuotaDashboard();
+        } else if (tabId === 'usage-dashboard') {
+            this.updateDashboard();
+        }
     }
 
     processQuotaData() {
