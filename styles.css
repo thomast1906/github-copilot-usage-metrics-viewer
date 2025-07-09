@@ -578,6 +578,90 @@ tr:hover {
     .chart-card {
         padding: 15px;
     }
+    
+    .pagination-controls {
+        flex-direction: column;
+    }
+    
+    .pagination-buttons {
+        margin-bottom: 15px;
+    }
+}
+
+/* Pagination Styles */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.pagination-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #e1e1e1;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(.disabled) {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.pagination-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.rows-per-page {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rows-per-page label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.rows-per-page select {
+    padding: 5px 10px;
+    border: 1px solid #e1e1e1;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+}
+
+.rows-per-page select:focus {
+    outline: none;
+    border-color: #667eea;
 }
 
 /* Tab Navigation Styles */
@@ -589,6 +673,10 @@ tr:hover {
     padding: 20px 20px 0 20px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    position: relative;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 .tab-btn {
@@ -623,4 +711,356 @@ tr:hover {
 .tab-content.active {
     display: block;
     animation: fadeIn 0.5s ease-in;
+}
+
+/* Dark Mode Toggle */
+.theme-toggle {
+    margin-left: auto;
+    position: relative;
+    margin-right: 15px;
+}
+
+.toggle-checkbox {
+    opacity: 0;
+    position: absolute;
+}
+
+.toggle-label {
+    background: #f1f1f1;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px;
+    position: relative;
+    height: 26px;
+    width: 60px;
+    transform: scale(1);
+    transition: background 0.4s;
+}
+
+.toggle-label i {
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.toggle-label .fa-sun {
+    color: #f39c12;
+    margin-left: 5px;
+}
+
+.toggle-label .fa-moon {
+    color: #667eea;
+    margin-right: 5px;
+}
+
+.toggle-label:after {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    content: '';
+    height: 20px;
+    left: 4px;
+    position: absolute;
+    top: 3px;
+    transition: 0.3s;
+    width: 20px;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+    background: #333;
+}
+
+.toggle-checkbox:checked + .toggle-label:after {
+    left: calc(100% - 24px);
+}
+
+/* Summary Dashboard Styles */
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.summary-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.date-range-display {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #666;
+    font-weight: 500;
+}
+
+.config-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.config-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.trend-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.trend-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.trend-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.trend-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.trend-period-selector {
+    display: flex;
+    gap: 5px;
+}
+
+.trend-period {
+    background: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.trend-period:hover {
+    background: #e9ecef;
+}
+
+.trend-period.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.trend-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.trend-main-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.trend-change {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.trend-percentage {
+    font-weight: 500;
+}
+
+.trend-indicator i.fa-arrow-up {
+    color: #28a745;
+}
+
+.trend-indicator i.fa-arrow-down {
+    color: #dc3545;
+}
+
+.trend-chart-container {
+    flex: 1;
+    min-height: 100px;
+}
+
+.summary-section {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.summary-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.heatmap-container {
+    height: 300px;
+}
+
+.model-comparison-container {
+    height: 400px;
+}
+
+.usage-patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.pattern-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.pattern-card h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1rem;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background: linear-gradient(135deg, #1a1c2c 0%, #4a3b7c 100%);
+    color: #e1e1e1;
+}
+
+body.dark-mode .container {
+    color: #e1e1e1;
+}
+
+body.dark-mode .header {
+    color: #ffffff;
+}
+
+body.dark-mode .upload-card,
+body.dark-mode .filters,
+body.dark-mode .stat-card,
+body.dark-mode .chart-card,
+body.dark-mode .data-table-section,
+body.dark-mode .tab-navigation,
+body.dark-mode .trend-card,
+body.dark-mode .summary-section {
+    background: #2a2d3e;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .tab-btn {
+    background: #3a3f55;
+    color: #b8b8b8;
+}
+
+body.dark-mode .tab-btn:hover {
+    background: #4a4f65;
+    color: #ffffff;
+}
+
+body.dark-mode .tab-btn.active {
+    background: linear-gradient(135deg, #5b6cff 0%, #8a6ddb 100%);
+    color: white;
+}
+
+body.dark-mode .stat-card,
+body.dark-mode .chart-card,
+body.dark-mode .pattern-card {
+    background: #2a2d3e;
+}
+
+body.dark-mode .stat-content h3,
+body.dark-mode .chart-card h3,
+body.dark-mode .summary-section h3,
+body.dark-mode .pattern-card h4,
+body.dark-mode .trend-header h3,
+body.dark-mode .trend-main-value,
+body.dark-mode .summary-header h2 {
+    color: #ffffff;
+}
+
+body.dark-mode .stat-content p,
+body.dark-mode .date-range-display {
+    color: #b8b8b8;
+}
+
+body.dark-mode table {
+    background: #2a2d3e;
+}
+
+body.dark-mode th {
+    background: #3a3f55;
+    color: #ffffff;
+    border-bottom: 2px solid #4a4f65;
+}
+
+body.dark-mode td {
+    border-bottom: 1px solid #3a3f55;
+    color: #b8b8b8;
+}
+
+body.dark-mode tr:hover {
+    background: #3a3f55;
+}
+
+body.dark-mode .pagination-controls {
+    background: #2a2d3e;
+}
+
+body.dark-mode .pagination-btn {
+    background: #3a3f55;
+    border-color: #4a4f65;
+    color: #b8b8b8;
+}
+
+body.dark-mode .pagination-btn:hover:not(.disabled) {
+    background: #4a4f65;
+    border-color: #5b6cff;
+    color: #ffffff;
+}
+
+body.dark-mode .pagination-btn.active {
+    background: #5b6cff;
+    color: white;
+}
+
+body.dark-mode .trend-period {
+    background: #3a3f55;
+    border-color: #4a4f65;
+    color: #b8b8b8;
+}
+
+body.dark-mode .trend-period:hover {
+    background: #4a4f65;
+}
+
+body.dark-mode .trend-period.active {
+    background: #5b6cff;
+    color: white;
 }
