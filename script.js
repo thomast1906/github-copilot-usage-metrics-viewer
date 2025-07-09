@@ -6,6 +6,22 @@ class CopilotUsageAnalyzer {
         this.filteredQuotaData = [];
         this.charts = {};
         this.currentTab = 'usage-dashboard';
+        
+        // Pagination settings
+        this.currentPage = 1;
+        this.currentQuotaPage = 1;
+        this.rowsPerPage = 20;
+        this.totalPages = 1;
+        this.totalQuotaPages = 1;
+        
+        // Data processing settings
+        this.chunkSize = 1000; // Number of rows to process at once
+        this.processingComplete = false;
+        
+        // Cache settings
+        this.cacheKey = 'copilot-analyzer-cache';
+        this.cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
         this.init();
     }
 
@@ -36,6 +52,152 @@ class CopilotUsageAnalyzer {
         
         // Stat card click listeners
         this.setupStatCardListeners();
+        
+        // Pagination event listeners
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('pagination-btn') && !e.target.classList.contains('quota-page')) {
+                const page = parseInt(e.target.dataset.page);
+                this.goToPage(page);
+            }
+        });
+        
+        // Check for cached data on load
+        this.checkForCachedData();
+    }
+    
+    checkForCachedData() {
+        try {
+            const cachedData = localStorage.getItem(this.cacheKey);
+            if (cachedData) {
+                const data = JSON.parse(cachedData);
+                
+                // Check if cache is still valid
+                if (data.timestamp && (Date.now() - data.timestamp) < this.cacheExpiry) {
+                    // Restore data from cache
+                    this.showLoadingIndicator('Loading cached data...');
+                    
+                    setTimeout(() => {
+                        this.rawData = data.rawData.map(row => {
+                            return {
+                                ...row,
+                                timestamp: new Date(row.timestamp) // Convert timestamp string back to Date object
+                            };
+                        });
+                        
+                        this.hideLoadingIndicator();
+                        this.processData();
+                        
+                        // Show notification
+                        this.showNotification('Data loaded from cache. Upload new data for fresh results.');
+                    }, 500);
+                    
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading cached data:', error);
+            // Clear potentially corrupted cache
+            localStorage.removeItem(this.cacheKey);
+        }
+        
+        return false;
+    }
+    
+    cacheRawData() {
+        try {
+            // Store raw data in localStorage
+            const dataToCache = {
+                timestamp: Date.now(),
+                rawData: this.rawData
+            };
+            
+            localStorage.setItem(this.cacheKey, JSON.stringify(dataToCache));
+        } catch (error) {
+            console.error('Error caching data:', error);
+            // If storage fails (e.g. quota exceeded), clear old cache and try again
+            try {
+                localStorage.clear();
+                localStorage.setItem(this.cacheKey, JSON.stringify({
+                    timestamp: Date.now(),
+                    rawData: this.rawData
+                }));
+            } catch (retryError) {
+                console.error('Failed to cache data after retry:', retryError);
+            }
+        }
+    }
+    
+    showNotification(message) {
+        // Create notification if it doesn't exist
+        if (!document.getElementById('notification')) {
+            const notification = document.createElement('div');
+            notification.id = 'notification';
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <span class="notification-message">${message}</span>
+                    <button class="notification-close">&times;</button>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            // Add styles if not already in the document
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    .notification {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        z-index: 9999;
+                        animation: slideIn 0.3s ease-out;
+                    }
+                    .notification-content {
+                        background: #667eea;
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    .notification-message {
+                        flex: 1;
+                    }
+                    .notification-close {
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 20px;
+                        cursor: pointer;
+                        padding: 0;
+                        line-height: 1;
+                    }
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Add close button event listener
+            const closeBtn = notification.querySelector('.notification-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    notification.remove();
+                });
+            }
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
     }
 
     async loadSampleData() {
@@ -79,8 +241,25 @@ class CopilotUsageAnalyzer {
         const headers = this.parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
         
         this.rawData = [];
+        this.processingComplete = false;
         
-        for (let i = 1; i < lines.length; i++) {
+        // Show loading indicator
+        this.showLoadingIndicator('Parsing CSV data...');
+        
+        // Use chunked processing for large files
+        this.processCSVChunks(lines, headers, 1);
+    }
+    
+    processCSVChunks(lines, headers, startIndex) {
+        // Process a chunk of the CSV data
+        const endIndex = Math.min(startIndex + this.chunkSize, lines.length);
+        
+        // Update loading progress
+        const progress = Math.floor((startIndex / lines.length) * 100);
+        this.updateLoadingProgress(progress);
+        
+        // Process this chunk
+        for (let i = startIndex; i < endIndex; i++) {
             const values = this.parseCSVLine(lines[i]).map(v => v.trim().replace(/^"|"$/g, ''));
             if (values.length === headers.length) {
                 const row = {};
@@ -105,12 +284,128 @@ class CopilotUsageAnalyzer {
             }
         }
         
-        if (this.rawData.length === 0) {
-            alert('No valid data found in the CSV file. Please check the format.');
-            return;
+        // If there are more chunks to process, schedule the next chunk
+        if (endIndex < lines.length) {
+            setTimeout(() => {
+                this.processCSVChunks(lines, headers, endIndex);
+            }, 0); // Use setTimeout to avoid blocking the UI
+        } else {
+            // All chunks processed
+            this.hideLoadingIndicator();
+            
+            if (this.rawData.length === 0) {
+                alert('No valid data found in the CSV file. Please check the format.');
+                return;
+            }
+            
+            // Save to cache
+            this.cacheRawData();
+            
+            this.processingComplete = true;
+            this.processData();
         }
-        
-        this.processData();
+    }
+    
+    showLoadingIndicator(message) {
+        // Create loading overlay if it doesn't exist
+        if (!document.getElementById('loading-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-message">${message}</div>
+                    <div class="loading-progress-container">
+                        <div class="loading-progress-bar"></div>
+                    </div>
+                    <div class="loading-percentage">0%</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            // Add styles if not already in the document
+            if (!document.getElementById('loading-styles')) {
+                const style = document.createElement('style');
+                style.id = 'loading-styles';
+                style.textContent = `
+                    #loading-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background-color: rgba(0, 0, 0, 0.7);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 9999;
+                    }
+                    .loading-container {
+                        background: white;
+                        padding: 30px;
+                        border-radius: 10px;
+                        text-align: center;
+                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                        max-width: 80%;
+                    }
+                    .loading-spinner {
+                        border: 5px solid #f3f3f3;
+                        border-top: 5px solid #667eea;
+                        border-radius: 50%;
+                        width: 50px;
+                        height: 50px;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 20px;
+                    }
+                    .loading-message {
+                        margin-bottom: 20px;
+                        font-size: 18px;
+                        color: #333;
+                    }
+                    .loading-progress-container {
+                        width: 100%;
+                        background-color: #f3f3f3;
+                        border-radius: 5px;
+                        margin-bottom: 10px;
+                    }
+                    .loading-progress-bar {
+                        height: 10px;
+                        border-radius: 5px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        width: 0%;
+                        transition: width 0.3s ease;
+                    }
+                    .loading-percentage {
+                        font-size: 16px;
+                        color: #666;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        } else {
+            // Update message if overlay exists
+            document.querySelector('.loading-message').textContent = message;
+        }
+    }
+    
+    updateLoadingProgress(percentage) {
+        const progressBar = document.querySelector('.loading-progress-bar');
+        const percentageText = document.querySelector('.loading-percentage');
+        if (progressBar && percentageText) {
+            progressBar.style.width = `${percentage}%`;
+            percentageText.textContent = `${percentage}%`;
+        }
+    }
+    
+    hideLoadingIndicator() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
     }
 
     parseCSVLine(line) {
@@ -147,6 +442,9 @@ class CopilotUsageAnalyzer {
         // Process quota data
         this.processQuotaData();
         
+        // Add data aggregation options
+        this.addAggregationOptions();
+        
         // Apply initial filters
         this.applyFilters();
         this.applyQuotaFilters();
@@ -154,6 +452,265 @@ class CopilotUsageAnalyzer {
         // Show dashboard
         document.getElementById('dashboard').style.display = 'block';
         document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    addAggregationOptions() {
+        // Create aggregation options container if it doesn't exist
+        let aggregationContainer = document.querySelector('.aggregation-options');
+        if (!aggregationContainer) {
+            aggregationContainer = document.createElement('div');
+            aggregationContainer.className = 'aggregation-options';
+            
+            // Add it after the filters
+            const filtersContainer = document.querySelector('.filters');
+            if (filtersContainer) {
+                filtersContainer.insertAdjacentElement('afterend', aggregationContainer);
+            }
+        }
+        
+        // Set content
+        aggregationContainer.innerHTML = `
+            <div class="aggregation-header">
+                <h3>Data Aggregation</h3>
+                <p>Optimize performance by aggregating data</p>
+            </div>
+            <div class="aggregation-controls">
+                <div class="aggregation-group">
+                    <label for="timeAggregation">Time Grouping:</label>
+                    <select id="timeAggregation">
+                        <option value="none">No Grouping</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="aggregation-group">
+                    <label for="dataLimit">Data Points Limit:</label>
+                    <select id="dataLimit">
+                        <option value="0">No Limit</option>
+                        <option value="100">100 Points</option>
+                        <option value="500">500 Points</option>
+                        <option value="1000">1000 Points</option>
+                    </select>
+                </div>
+                <button id="applyAggregation" class="aggregation-btn">
+                    Apply Aggregation
+                </button>
+            </div>
+        `;
+        
+        // Add styles
+        if (!document.getElementById('aggregation-styles')) {
+            const style = document.createElement('style');
+            style.id = 'aggregation-styles';
+            style.textContent = `
+                .aggregation-options {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 15px;
+                    margin-bottom: 30px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                }
+                
+                .aggregation-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                
+                .aggregation-header h3 {
+                    margin: 0;
+                    color: #333;
+                    font-size: 1.2rem;
+                }
+                
+                .aggregation-header p {
+                    margin: 0;
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+                
+                .aggregation-controls {
+                    display: flex;
+                    gap: 20px;
+                    flex-wrap: wrap;
+                    align-items: flex-end;
+                }
+                
+                .aggregation-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px;
+                }
+                
+                .aggregation-group label {
+                    font-weight: 500;
+                    color: #333;
+                }
+                
+                .aggregation-group select {
+                    padding: 8px 12px;
+                    border: 2px solid #e1e1e1;
+                    border-radius: 8px;
+                    background: white;
+                    cursor: pointer;
+                    min-width: 150px;
+                }
+                
+                .aggregation-btn {
+                    padding: 8px 16px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    height: 37px;
+                }
+                
+                .aggregation-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+                }
+                
+                @media (max-width: 768px) {
+                    .aggregation-controls {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    
+                    .aggregation-btn {
+                        margin-top: 10px;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Add event listeners
+        document.getElementById('applyAggregation').addEventListener('click', () => this.applyDataAggregation());
+    }
+    
+    applyDataAggregation() {
+        const timeAggregation = document.getElementById('timeAggregation').value;
+        const dataLimit = parseInt(document.getElementById('dataLimit').value);
+        
+        // Show loading indicator
+        this.showLoadingIndicator('Applying data aggregation...');
+        
+        // Use setTimeout to avoid blocking UI
+        setTimeout(() => {
+            // Apply aggregation based on selected options
+            if (timeAggregation !== 'none') {
+                this.aggregateDataByTime(timeAggregation);
+            }
+            
+            // Apply data point limiting if needed
+            if (dataLimit > 0) {
+                this.limitDataPoints(dataLimit);
+            }
+            
+            // Hide loading indicator
+            this.hideLoadingIndicator();
+            
+            // Update dashboard with aggregated data
+            this.applyFilters();
+            this.applyQuotaFilters();
+            
+            // Show notification
+            this.showNotification('Data aggregation applied successfully');
+        }, 100);
+    }
+    
+    aggregateDataByTime(timeAggregation) {
+        // Create a copy of the original data
+        const originalData = [...this.rawData];
+        
+        // Group data by the selected time period
+        const groupedData = {};
+        
+        originalData.forEach(row => {
+            let timeKey;
+            const date = row.timestamp;
+            
+            if (timeAggregation === 'daily') {
+                // Group by day: YYYY-MM-DD
+                timeKey = date.toISOString().split('T')[0];
+            } else if (timeAggregation === 'weekly') {
+                // Group by week: YYYY-WW (year and week number)
+                const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+                const weekNumber = Math.ceil(((date - firstDayOfYear) / 86400000 + firstDayOfYear.getDay() + 1) / 7);
+                timeKey = `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+            } else if (timeAggregation === 'monthly') {
+                // Group by month: YYYY-MM
+                timeKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            }
+            
+            // Create group key combining time, user and model
+            const groupKey = `${timeKey}|${row.user}|${row.model}`;
+            
+            if (!groupedData[groupKey]) {
+                groupedData[groupKey] = {
+                    timestamp: new Date(timeKey.includes('W') 
+                        ? this.getDateOfWeek(parseInt(timeKey.split('-W')[1]), parseInt(timeKey.split('-')[0]))
+                        : timeKey),
+                    user: row.user,
+                    model: row.model,
+                    requests: 0,
+                    exceedsQuota: false,
+                    quota: row.quota,
+                    originalData: row.originalData
+                };
+            }
+            
+            // Sum requests
+            groupedData[groupKey].requests += row.requests;
+            
+            // If any row exceeds quota, mark the group as exceeding
+            if (row.exceedsQuota) {
+                groupedData[groupKey].exceedsQuota = true;
+            }
+        });
+        
+        // Convert back to array
+        this.rawData = Object.values(groupedData);
+        
+        // Recalculate quota data
+        this.processQuotaData();
+    }
+    
+    getDateOfWeek(weekNumber, year) {
+        // Get the first day of the year
+        const firstDayOfYear = new Date(year, 0, 1);
+        
+        // Get the first Monday of the year
+        const firstMonday = new Date(year, 0, 1 + (8 - firstDayOfYear.getDay()) % 7);
+        
+        // Add the weeks
+        const targetDate = new Date(firstMonday);
+        targetDate.setDate(firstMonday.getDate() + (weekNumber - 1) * 7);
+        
+        return targetDate;
+    }
+    
+    limitDataPoints(limit) {
+        if (this.rawData.length <= limit) {
+            return; // No need to limit
+        }
+        
+        // Sort by timestamp (newest first)
+        this.rawData.sort((a, b) => b.timestamp - a.timestamp);
+        
+        // Get the most recent data points up to the limit
+        this.rawData = this.rawData.slice(0, limit);
+        
+        // Recalculate quota data
+        this.processQuotaData();
     }
 
     populateFilters() {
@@ -438,7 +995,7 @@ class CopilotUsageAnalyzer {
                         }
                     }
                 },
-                onClick: (event, elements) => {
+                onClick: (_, elements) => {
                     if (elements.length > 0) {
                         const element = elements[0];
                         const modelName = labels[element.index];
@@ -737,7 +1294,7 @@ class CopilotUsageAnalyzer {
         });
         
         // Convert to chart.js format (simplified bar chart since heatmap requires additional library)
-        const hourlyByDay = dayNames.map((day, dayIndex) => {
+        const hourlyByDay = dayNames.map((_, dayIndex) => {
             let dayTotal = 0;
             for (let hour = 0; hour < 24; hour++) {
                 dayTotal += heatmapData[`${dayIndex}-${hour}`] || 0;
@@ -984,7 +1541,7 @@ class CopilotUsageAnalyzer {
             data: {
                 datasets: [{
                     label: 'Model Performance',
-                    data: performanceData.map((item, index) => ({
+                    data: performanceData.map(item => ({
                         x: item.adoptionRate,
                         y: item.avgRequestsPerUser,
                         label: item.model
@@ -1038,7 +1595,16 @@ class CopilotUsageAnalyzer {
         // Sort by timestamp (newest first)
         const sortedData = [...this.filteredData].sort((a, b) => b.timestamp - a.timestamp);
         
-        sortedData.forEach(row => {
+        // Calculate total pages
+        this.totalPages = Math.ceil(sortedData.length / this.rowsPerPage);
+        
+        // Get current page data
+        const startIndex = (this.currentPage - 1) * this.rowsPerPage;
+        const endIndex = Math.min(startIndex + this.rowsPerPage, sortedData.length);
+        const currentPageData = sortedData.slice(startIndex, endIndex);
+        
+        // Render current page data
+        currentPageData.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.timestamp.toLocaleString()}</td>
@@ -1050,6 +1616,104 @@ class CopilotUsageAnalyzer {
             `;
             tbody.appendChild(tr);
         });
+        
+        // Update pagination controls
+        this.updatePaginationControls('dataTable');
+    }
+    
+    updatePaginationControls(tableId) {
+        // Find or create pagination container
+        let paginationContainer = document.getElementById(`${tableId}-pagination`);
+        if (!paginationContainer) {
+            paginationContainer = document.createElement('div');
+            paginationContainer.id = `${tableId}-pagination`;
+            paginationContainer.className = 'pagination-controls';
+            
+            // Find table container and append pagination after it
+            const tableContainer = document.querySelector(`.table-container:has(#${tableId})`);
+            if (tableContainer) {
+                tableContainer.insertAdjacentElement('afterend', paginationContainer);
+            }
+        }
+        
+        // Clear existing pagination controls
+        paginationContainer.innerHTML = '';
+        
+        // Don't show pagination if only one page
+        if (this.totalPages <= 1) {
+            return;
+        }
+        
+        // Create pagination HTML
+        let paginationHTML = `
+            <div class="pagination-info">Showing ${(this.currentPage - 1) * this.rowsPerPage + 1} to ${Math.min(this.currentPage * this.rowsPerPage, this.filteredData.length)} of ${this.filteredData.length} entries</div>
+            <div class="pagination-buttons">
+        `;
+        
+        // Previous button
+        paginationHTML += `
+            <button class="pagination-btn ${this.currentPage === 1 ? 'disabled' : ''}" 
+                    ${this.currentPage === 1 ? 'disabled' : 'data-page="' + (this.currentPage - 1) + '"'}>
+                &laquo; Previous
+            </button>
+        `;
+        
+        // Page buttons
+        const maxButtons = 5;
+        const startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+        const endPage = Math.min(this.totalPages, startPage + maxButtons - 1);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <button class="pagination-btn page-number ${i === this.currentPage ? 'active' : ''}" 
+                        data-page="${i}">
+                    ${i}
+                </button>
+            `;
+        }
+        
+        // Next button
+        paginationHTML += `
+            <button class="pagination-btn ${this.currentPage === this.totalPages ? 'disabled' : ''}" 
+                    ${this.currentPage === this.totalPages ? 'disabled' : 'data-page="' + (this.currentPage + 1) + '"'}>
+                Next &raquo;
+            </button>
+        `;
+        
+        paginationHTML += `</div>`;
+        
+        // Add rows per page selector
+        paginationHTML += `
+            <div class="rows-per-page">
+                <label for="rowsPerPage">Rows per page:</label>
+                <select id="rowsPerPage">
+                    <option value="10" ${this.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                    <option value="20" ${this.rowsPerPage === 20 ? 'selected' : ''}>20</option>
+                    <option value="50" ${this.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${this.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                </select>
+            </div>
+        `;
+        
+        // Set the HTML
+        paginationContainer.innerHTML = paginationHTML;
+        
+        // Add event listener to rows per page selector
+        const rowsPerPageSelect = document.getElementById('rowsPerPage');
+        if (rowsPerPageSelect) {
+            rowsPerPageSelect.addEventListener('change', (e) => {
+                this.rowsPerPage = parseInt(e.target.value);
+                this.currentPage = 1; // Reset to first page
+                this.updateTable();
+            });
+        }
+    }
+    
+    goToPage(page) {
+        if (page >= 1 && page <= this.totalPages) {
+            this.currentPage = page;
+            this.updateTable();
+        }
     }
 
     filterTable() {
@@ -1690,7 +2354,7 @@ class CopilotUsageAnalyzer {
                         position: 'bottom'
                     }
                 },
-                onClick: (event, elements) => {
+                onClick: (_, elements) => {
                     if (elements.length > 0) {
                         const element = elements[0];
                         const category = labels[element.index];
@@ -1857,7 +2521,16 @@ class CopilotUsageAnalyzer {
         const sortedData = [...this.filteredQuotaData]
             .sort((a, b) => b.usagePercentage - a.usagePercentage);
         
-        sortedData.forEach(row => {
+        // Calculate total pages
+        this.totalQuotaPages = Math.ceil(sortedData.length / this.rowsPerPage);
+        
+        // Get current page data
+        const startIndex = ((this.currentQuotaPage || 1) - 1) * this.rowsPerPage;
+        const endIndex = Math.min(startIndex + this.rowsPerPage, sortedData.length);
+        const currentPageData = sortedData.slice(startIndex, endIndex);
+        
+        // Render current page data
+        currentPageData.forEach(row => {
             const tr = document.createElement('tr');
             const statusClass = row.usagePercentage > 100 ? 'quota-exceeded' : 'quota-normal';
             
@@ -1872,6 +2545,114 @@ class CopilotUsageAnalyzer {
             `;
             tbody.appendChild(tr);
         });
+        
+        // Update pagination controls
+        this.updateQuotaPaginationControls('quotaTable');
+    }
+    
+    updateQuotaPaginationControls(tableId) {
+        // Find or create pagination container
+        let paginationContainer = document.getElementById(`${tableId}-pagination`);
+        if (!paginationContainer) {
+            paginationContainer = document.createElement('div');
+            paginationContainer.id = `${tableId}-pagination`;
+            paginationContainer.className = 'pagination-controls';
+            
+            // Find table container and append pagination after it
+            const tableContainer = document.querySelector(`.table-container:has(#${tableId})`);
+            if (tableContainer) {
+                tableContainer.insertAdjacentElement('afterend', paginationContainer);
+            }
+        }
+        
+        // Clear existing pagination controls
+        paginationContainer.innerHTML = '';
+        
+        // Don't show pagination if only one page
+        if (this.totalQuotaPages <= 1) {
+            return;
+        }
+        
+        // Create pagination HTML
+        let paginationHTML = `
+            <div class="pagination-info">Showing ${((this.currentQuotaPage || 1) - 1) * this.rowsPerPage + 1} to ${Math.min((this.currentQuotaPage || 1) * this.rowsPerPage, this.filteredQuotaData.length)} of ${this.filteredQuotaData.length} entries</div>
+            <div class="pagination-buttons">
+        `;
+        
+        // Previous button
+        paginationHTML += `
+            <button class="pagination-btn quota-page ${(this.currentQuotaPage || 1) === 1 ? 'disabled' : ''}" 
+                    ${(this.currentQuotaPage || 1) === 1 ? 'disabled' : 'data-page="' + ((this.currentQuotaPage || 1) - 1) + '"'}>
+                &laquo; Previous
+            </button>
+        `;
+        
+        // Page buttons
+        const maxButtons = 5;
+        const startPage = Math.max(1, (this.currentQuotaPage || 1) - Math.floor(maxButtons / 2));
+        const endPage = Math.min(this.totalQuotaPages, startPage + maxButtons - 1);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <button class="pagination-btn quota-page page-number ${i === (this.currentQuotaPage || 1) ? 'active' : ''}" 
+                        data-page="${i}">
+                    ${i}
+                </button>
+            `;
+        }
+        
+        // Next button
+        paginationHTML += `
+            <button class="pagination-btn quota-page ${(this.currentQuotaPage || 1) === this.totalQuotaPages ? 'disabled' : ''}" 
+                    ${(this.currentQuotaPage || 1) === this.totalQuotaPages ? 'disabled' : 'data-page="' + ((this.currentQuotaPage || 1) + 1) + '"'}>
+                Next &raquo;
+            </button>
+        `;
+        
+        paginationHTML += `</div>`;
+        
+        // Add rows per page selector
+        paginationHTML += `
+            <div class="rows-per-page">
+                <label for="quotaRowsPerPage">Rows per page:</label>
+                <select id="quotaRowsPerPage">
+                    <option value="10" ${this.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                    <option value="20" ${this.rowsPerPage === 20 ? 'selected' : ''}>20</option>
+                    <option value="50" ${this.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${this.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                </select>
+            </div>
+        `;
+        
+        // Set the HTML
+        paginationContainer.innerHTML = paginationHTML;
+        
+        // Add event listener to rows per page selector
+        const rowsPerPageSelect = document.getElementById('quotaRowsPerPage');
+        if (rowsPerPageSelect) {
+            rowsPerPageSelect.addEventListener('change', (e) => {
+                this.rowsPerPage = parseInt(e.target.value);
+                this.currentQuotaPage = 1; // Reset to first page
+                this.updateQuotaTable();
+            });
+        }
+        
+        // Add event listeners for quota pagination buttons
+        document.querySelectorAll('.pagination-btn.quota-page').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('disabled')) {
+                    const page = parseInt(e.target.dataset.page);
+                    this.goToQuotaPage(page);
+                }
+            });
+        });
+    }
+    
+    goToQuotaPage(page) {
+        if (page >= 1 && page <= this.totalQuotaPages) {
+            this.currentQuotaPage = page;
+            this.updateQuotaTable();
+        }
     }
 
     filterQuotaTable() {
