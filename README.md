@@ -9,7 +9,9 @@ A private, browser-only dashboard for the current GitHub Copilot activity export
 - Model routing, including **Auto vs named model** totals and a day-by-day comparison
 - Auto-routing share by Agent and Ask mode, plus repeat-use segments
 - Product-surface adoption across chat, agent, CLI, coding agent, cloud agent, and the Copilot app
-- Feature, language and IDE activity
+- Feature, language and IDE activity, in a single dimension-toggled breakdown panel
+- Agent-initiated vs user-initiated code changes per person — split using the same agent/edit/custom-mode definition GitHub's own dashboard uses for "Agent Contribution", but broken out by person instead of only as an org-wide number
+- Inline-completion acceptance rate, per person
 - Accepted activity, lines added, and reported AI credit use
 - A per-person table for the selected period
 
