@@ -1,6 +1,6 @@
 # Copilot Signals
 
-A private, browser-only dashboard for the current GitHub Copilot activity export. It is designed around the `part-*.json` / `part-*.ndjson` files produced by GitHub’s newer export, rather than the old premium-request CSV.
+A private, browser-only dashboard for the current GitHub Copilot activity export. It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s newer export.
 
 ## What it shows
 
@@ -25,7 +25,7 @@ The dashboard deliberately does not present the new export as monthly quota data
 
 All parsing and analytics happen locally in the browser; uploaded exports are not sent anywhere.
 
-`data_example.csv` remains supported as a lightweight legacy fallback. The included `part-*.ndjson` file is the primary sample and can be loaded with **Explore included sample**.
+The included `data_example.json` is a fully anonymised, 2,109-record activity-export sample and can be loaded with **Explore included sample**. It contains no original user, organisation, or enterprise identifiers.
 
 ## Technical notes
 
