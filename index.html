@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A private, browser-based viewer for GitHub Copilot metrics exports.">
   <meta name="theme-color" content="#0b1220">
-  <title>Copilot Signals</title>
+  <title>GitHub Copilot Signals Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,14 +15,14 @@
 <body>
   <main class="shell">
     <header class="hero">
-      <div class="brand"><span class="brand-mark">✦</span> COPILOT SIGNALS</div>
-      <h1>See how teams are actually using Copilot.</h1>
+      <div class="brand"><span class="brand-mark">✦</span> GitHub Copilot Signals Dashboard</div>
+      <h1>See how teams are actually using GitHub Copilot.</h1>
       <p>Turn GitHub’s detailed activity export into adoption, workflow, and model-routing signals. Processing stays entirely in your browser.</p>
     </header>
 
     <section id="uploadPanel" class="upload-panel">
       <div class="upload-icon">↥</div>
-      <h2>Load a GitHub Copilot activity export</h2>
+      <h2>Load a GitHub GitHub Copilot export</h2>
       <p>Choose one or more <code>part-*.json</code> or <code>part-*.ndjson</code> files from the updated export. JSON arrays are also supported.</p>
       <input id="fileInput" type="file" accept=".json,.ndjson,application/json" multiple hidden>
       <div class="upload-actions">
@@ -36,7 +36,7 @@
       <div class="toolbar">
         <div>
           <p class="eyebrow">ACTIVITY EXPORT</p>
-          <h2 id="reportTitle">Copilot activity</h2>
+          <h2 id="reportTitle">GitHub Copilot</h2>
           <p id="reportMeta" class="muted"></p>
         </div>
         <div class="filter-set">

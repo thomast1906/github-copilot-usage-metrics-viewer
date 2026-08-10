@@ -1,6 +1,6 @@
-# Copilot Signals
+# GitHub Copilot Signals Dashboard
 
-A private, browser-only dashboard for the current GitHub Copilot activity export. It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s newer export.
+A private, browser-only dashboard for the current GitHub GitHub Copilot export. It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s newer export.
 
 ## What it shows
 
@@ -20,7 +20,7 @@ The dashboard deliberately does not present the new export as monthly quota data
 ## Use it
 
 1. Open the site (GitHub Pages or a local static server).
-2. Select every `part-*` file from a single GitHub Copilot activity export. NDJSON, JSON arrays, and `.json` files are supported.
+2. Select every `part-*` file from a single GitHub GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
 3. Use the period, person and model filters to explore the data.
 
 All parsing and analytics happen locally in the browser; uploaded exports are not sent anywhere.
