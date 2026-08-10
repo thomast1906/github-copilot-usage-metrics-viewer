@@ -1,109 +1,32 @@
-# GitHub Copilot  Usage Metrics Viewer
-📊 Interactive dashboard for visualising GitHub Copilot requests usage metrics and analytics
+# GitHub Copilot Signals Dashboard
 
-A web-based dashboard that provides insights into GitHub Copilot requests usage patterns, model distribution, user activity, and hourly trends. Built as a single-page application with no external dependencies.
+A private, browser-only dashboard for the current GitHub GitHub Copilot export. It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s newer export.
 
-🚀 Ready to use in seconds! Just open in your browser - no installation, no setup, no server required. All data processing happens locally for complete privacy.
+## What it shows
 
-<div style="display: flex; gap: 10px; align-items: center;">
-  <img alt="GitHub Copilot Dashboard" src="https://img.shields.io/badge/GitHub-Copilot-blue?style=for-the-badge&amp;logo=github">
-  <img alt="HTML5" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white">
-  <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&amp;logo=javascript&amp;logoColor=black">
-  <img alt="Chart.js" src="https://img.shields.io/badge/Chart.js-F5788D?style=for-the-badge&amp;logo=chart.js&amp;logoColor=white">
-</div>
+- Seat engagement: reported vs active people, chat and agent adoption
+- Daily interactions and code-generation activity
+- Model routing, including **Auto vs named model** totals and a day-by-day comparison
+- Auto-routing share by Agent and Ask mode, plus repeat-use segments
+- Product-surface adoption across chat, agent, CLI, coding agent, cloud agent, and the Copilot app
+- Feature, language and IDE activity, in a single dimension-toggled breakdown panel
+- Agent-initiated vs user-initiated code changes per person — split using the same agent/edit/custom-mode definition GitHub's own dashboard uses for "Agent Contribution", but broken out by person instead of only as an org-wide number
+- Inline-completion acceptance rate, per person
+- Accepted activity, lines added, and reported AI credit use
+- A per-person table for the selected period
 
----
+The dashboard deliberately does not present the new export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
 
-## ✨ Features
-- 🔒 **Privacy-First**: All data processing happens locally in your browser - no external transmission
-- ⚡ **Zero Setup**: Just open in any modern browser - no installation or configuration required
-- 📊 **Overview Analytics**: Total users, requests, model distribution, and top users etc
-- 🔍 **Advanced Analytics**: Hourly usage patterns, filtering by date, user, or model
-- 💡 **Insights Dashboard**: Interactive charts, real-time search, and exportable filtered data
+## Use it
 
-### Dashboard Preview
+1. Open the site (GitHub Pages or a local static server).
+2. Select every `part-*` file from a single GitHub GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
+3. Use the period, person and model filters to explore the data.
 
-![Dashboard Screenshot](screenshots/screenshot1.png)
+All parsing and analytics happen locally in the browser; uploaded exports are not sent anywhere.
 
-![Dashboard Screenshot](screenshots/screenshot2.png)
+The included `data_example.json` is a fully anonymised, 2,109-record activity-export sample and can be loaded with **Explore included sample**. It contains no original user, organisation, or enterprise identifiers.
 
----
+## Technical notes
 
-## 🚀 Getting Started
-
-### Option 1: GitHub Pages (Recommended)
-✨ Instant access: Deploy the dashboard to GitHub Pages and access it at: `https://[username].github.io/[repository-name]/`
-
-### Option 2: Local Usage
-📁 Download and go: Clone the repository and open `index.html` in your browser  
-📊 Load your data: Click "📁 Load Data" and upload your GitHub Copilot metrics CSV file  
-💡 No server required: The dashboard works directly from your file system - just double-click and open!
-
-### Option 3: Clone/Fork and Deploy
-Clone or fork the repository and run it with your own GitHub Actions to deploy to your own GitHub Pages or other hosting platforms. The included GitHub Actions workflow in `.github/workflows/deploy.yml` automatically deploys to GitHub Pages on push to the main branch.
-
----
-
-## 🧪 Sample Data
-A sample dataset (`data_example.csv`) is included in the repository to help you:
-- Explore the dashboard features without your own data
-- Understand the expected data format
-- Test new features during development
-
-The sample data includes:
-- Timestamps, user identifiers, model names, and request counts
-- Realistic usage patterns for testing and exploration
-
----
-
-## 📋 Getting Your Data
-Ready to see your own Copilot insights? Here's how to get your data in 3 simple steps:
-
-1. Export your GitHub Copilot usage metrics as a CSV file.
-2. Ensure the file matches the expected format:
-   ```csv
-   Timestamp,User,Model,Requests Used,Exceeds Monthly Quota,Total Monthly Quota
-   2025-06-18T10:43:41.8378480Z,User41,gpt-4o-2024-11-20,1,FALSE,Unlimited
-   ```
-3. Load the file into the dashboard by clicking "📁 Load Data".
-
----
-
-## 🛠️ Technical Details
-- **Built With**: HTML5, CSS3, vanilla JavaScript, and Chart.js
-- **Browser Compatibility**: Works in all modern browsers (Chrome, Firefox, Safari, Edge)
-- **Performance**: Client-side CSV parsing for fast data loading and efficient filtering
-
----
-
-## 📖 Usage Examples
-- **Enterprise Teams**: Monitor GitHub Copilot Premium request adoption, track usage trends, and optimize licensing
-- **Individual Developers**: Personal productivity tracking, model-specific insights, and usage patterns
-
----
-
-## 🤝 Contributing
-We welcome contributions! Please see `CONTRIBUTING.md` for guidelines.
-
-1. Fork the repository  
-2. Create a feature branch  
-3. Make changes  
-4. Test thoroughly  
-5. Submit a pull request  
-
----
-
-## 📄 License
-This project is licensed under the MIT License - see the `LICENSE` file for details.
-
----
-
-## 🆘 Support
-For issues, questions, or contributions:
-- Check the [Issues](../../issues) section
-- Create a new issue with detailed information
-- Consider contributing improvements via pull requests
-
----
-
-Built with ❤️ for GitHub Copilot users who want to understand their usage patterns.
+This is a static site built with vanilla JavaScript and Chart.js. It needs no build step or backend. GitHub’s export schema can add fields over time; the viewer uses the stable top-level activity fields and the supplied nested totals (`totals_by_*`) when available.

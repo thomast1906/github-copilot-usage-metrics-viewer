@@ -1,535 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Copilot Usage Metrics Viewer</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
-    <meta name="description" content="Analyze GitHub Copilot usage metrics with interactive dashboards and visualizations">
-    <meta name="theme-color" content="#667eea">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A private, browser-based viewer for GitHub Copilot metrics exports.">
+  <meta name="theme-color" content="#0b1220">
+  <title>GitHub Copilot Signals Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1> GitHub Copilot Usage Metrics Viewer</h1>
-            <p>Analyze your GitHub Copilot usage patterns and trends</p>
-        </header>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand"><span class="brand-mark">✦</span> GitHub Copilot Signals Dashboard</div>
+      <h1>See how teams are actually using GitHub Copilot.</h1>
+      <p>Turn GitHub’s detailed activity export into adoption, workflow, and model-routing signals. Processing stays entirely in your browser.</p>
+    </header>
 
-        <div class="upload-section">
-            <div class="upload-card">
-                <i class="fas fa-upload"></i>
-                <h3>Upload Your Data</h3>
-                <p> <a href="https://docs.github.com/en/copilot/managing-copilot/understanding-and-managing-copilot-usage/monitoring-your-copilot-usage-and-entitlements#downloading-a-monthly-usage-report" target="_blank">GitHub Copilot Usage Report Generation Documentation</a></p>
-                <p><strong>Please note:</strong> The usage report currently available for this is Enterprise level.<em>(Will keep reviewing individual accounts until correct data is available)</em></p>
-                <p>Upload your CSV file to analyze GitHub Copilot Premium usage requests and quota metrics.</p>
-                <p>All data stays in your browser.</p>
-                <input type="file" id="csvFileInput" accept=".csv" class="file-input">
-                <label for="csvFileInput" class="upload-btn">
-                    <i class="fas fa-cloud-upload-alt"></i> Choose CSV File
-                </label>
-                <button id="loadSampleData" class="sample-btn">
-                    <i class="fas fa-chart-line"></i> Load Sample Data
-                </button>
-            </div>
+    <section id="uploadPanel" class="upload-panel">
+      <div class="upload-icon">↥</div>
+      <h2>Load a GitHub GitHub Copilot export</h2>
+      <p>Choose one or more <code>part-*.json</code> or <code>part-*.ndjson</code> files from the updated export. JSON arrays are also supported.</p>
+      <input id="fileInput" type="file" accept=".json,.ndjson,application/json" multiple hidden>
+      <div class="upload-actions">
+        <label class="button primary" for="fileInput">Choose export files</label>
+        <button id="loadSample" class="button secondary">Explore included sample</button>
+      </div>
+      <p class="hint">One record represents one user on one day. Upload every <code>part-*</code> file from an export for the complete period.</p>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div class="toolbar">
+        <div>
+          <p class="eyebrow">ACTIVITY EXPORT</p>
+          <h2 id="reportTitle">GitHub Copilot</h2>
+          <p id="reportMeta" class="muted"></p>
         </div>
-
-        <div id="dashboard" class="dashboard" style="display: none;">
-            <!-- Tab Navigation -->
-            <div class="tab-navigation">
-                <button class="tab-btn active" data-tab="usage-dashboard">Usage Dashboard</button>
-                <button class="tab-btn" data-tab="quota-dashboard">Monthly Quota Analysis</button>
-                <div class="theme-toggle">
-                    <input type="checkbox" id="darkModeToggle" class="toggle-checkbox">
-                    <label for="darkModeToggle" class="toggle-label">
-                        <i class="fas fa-sun"></i>
-                        <i class="fas fa-moon"></i>
-                    </label>
-                </div>
-            </div>
-            
-            <!-- Removed Summary Dashboard Tab -->
-
-            <!-- Usage Dashboard Tab -->
-            <div id="usage-dashboard" class="tab-content active">
-                <div class="filters">
-                    <div class="filter-group">
-                        <label for="dateRange">Date Range:</label>
-                        <select id="dateRange">
-                            <option value="all">All Time</option>
-                            <option value="7">Last 7 Days</option>
-                            <option value="30">Last 30 Days</option>
-                            <option value="90">Last 90 Days</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="userFilter">User:</label>
-                        <select id="userFilter">
-                            <option value="all">All Users</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="modelFilter">Model:</label>
-                        <select id="modelFilter">
-                            <option value="all">All Models</option>
-                        </select>
-                    </div>
-                </div>
-
-            <div class="stats-grid">
-                <div class="stat-card clickable" data-modal="users-modal">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="totalUsers">0</h3>
-                        <p>Total Users</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="totalRequests">0</h3>
-                        <p>Total Requests</p>
-                    </div>
-                </div>
-                <div class="stat-card clickable" data-modal="models-modal">
-                    <div class="stat-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="totalModels">0</h3>
-                        <p>Models Used</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="avgRequestsPerUser">0</h3>
-                        <p>Avg Requests/User</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-calendar-day"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="dailyAverage">0</h3>
-                        <p>Daily Average Requests</p>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="peakHour">--</h3>
-                        <p>Peak Usage Hour</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="weeklyGrowth">0%</h3>
-                        <p>Weekly Growth Rate</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-fire"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="mostActiveUser">--</h3>
-                        <p>Most Active User</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="topModel">--</h3>
-                        <p>Top Model</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>Requests Over Time</h3>
-                    <canvas id="timelineChart"></canvas>
-                </div>
-                <div class="chart-card clickable" data-modal="model-distribution-modal">
-                    <h3>Model Usage Distribution</h3>
-                    <canvas id="modelChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Model Usage Bar Chart</h3>
-                    <canvas id="modelBarChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Top Users by Requests</h3>
-                    <canvas id="userChart"></canvas>
-                </div>
-                <div class="chart-card chart-card-large">
-                    <h3>Model Trends Over Time</h3>
-                    <canvas id="modelTrendsChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Day of Week Usage</h3>
-                    <canvas id="dayOfWeekChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Hourly Usage Pattern</h3>
-                    <canvas id="hourlyUsageChart"></canvas>
-                </div>
-
-                <div class="chart-card">
-                    <h3>User Activity Heatmap</h3>
-                    <canvas id="activityHeatmapChart"></canvas>
-                </div>
-                <div class="chart-card chart-card-large">
-                    <h3>Cumulative Usage Growth</h3>
-                    <canvas id="cumulativeGrowthChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Request Size Distribution</h3>
-                    <canvas id="requestSizeChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>User Efficiency Analysis</h3>
-                    <canvas id="userEfficiencyChart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Model Performance Comparison</h3>
-                    <canvas id="modelPerformanceChart"></canvas>
-                </div>
-            </div>
-
-            <div class="data-table-section">
-                <h3>Raw Data</h3>
-                <div class="table-controls">
-                    <input type="text" id="searchInput" placeholder="Search data...">
-                    <button id="exportBtn"><i class="fas fa-download"></i> Export Filtered Data</button>
-                </div>
-                <div class="table-container">
-                    <table id="dataTable">
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>User</th>
-                                <th>Model</th>
-                                <th>Requests</th>
-                                <th>Exceeds Monthly Quota</th>
-                                <th>Total Monthly Quota</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dataTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            </div>
-
-            <!-- Monthly Quota Dashboard Tab -->
-            <div id="quota-dashboard" class="tab-content">
-                <div class="filters">
-                    <div class="filter-group">
-                        <label for="quotaUserFilter">User:</label>
-                        <select id="quotaUserFilter">
-                            <option value="all">All Users</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="quotaDateRange">Date Range:</label>
-                        <select id="quotaDateRange">
-                            <option value="all">All Time</option>
-                            <option value="7">Last 7 Days</option>
-                            <option value="30">Last 30 Days</option>
-                            <option value="90">Last 90 Days</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card clickable" data-modal="quota-users-modal">
-                        <div class="stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="quotaTotalUsers">0</h3>
-                            <p>Total Users with Quota</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="quotaAverageUsage">0%</h3>
-                            <p>Average Quota Usage</p>
-                        </div>
-                    </div>
-                    <div class="stat-card clickable" data-modal="quota-near-limit-modal">
-                        <div class="stat-icon">
-                            <i class="fas fa-warning"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="quotaNearLimitUsers">0</h3>
-                            <p>Users Near Limit (80-100%)</p>
-                        </div>
-                    </div>
-                    <div class="stat-card clickable" data-modal="quota-over-limit-modal">
-                        <div class="stat-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="quotaOverLimitUsers">0</h3>
-                            <p>Users Over Limit (>100%)</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="charts-grid">
-                    <div class="chart-card clickable" data-modal="quota-users-modal">
-                        <h3>Quota Usage by User</h3>
-                        <canvas id="quotaUsageChart"></canvas>
-                    </div>
-                    <div class="chart-card clickable" data-modal="quota-distribution-modal">
-                        <h3>Quota Usage Distribution</h3>
-                        <canvas id="quotaDistributionChart"></canvas>
-                    </div>
-                    <div class="chart-card clickable" data-modal="quota-breakdown-modal">
-                        <h3>Request Breakdown by Quota Status</h3>
-                        <canvas id="quotaBreakdownChart"></canvas>
-                    </div>
-                    <div class="chart-card chart-card-large">
-                        <h3>User Quota Usage Over Time</h3>
-                        <canvas id="quotaTimelineChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="data-table-section">
-                    <h3>User Quota Summary</h3>
-                    <div class="table-controls">
-                        <input type="text" id="quotaSearchInput" placeholder="Search users...">
-                        <button id="quotaExportBtn"><i class="fas fa-download"></i> Export Quota Analysis</button>
-                    </div>
-                    <div class="table-container">
-                        <table id="quotaTable">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Total Requests</th>
-                                    <th>Monthly Quota</th>
-                                    <th>Usage %</th>
-                                    <th>Status</th>
-                                    <th>Requests Exceeding Quota</th>
-                                    <th>Remaining Quota</th>
-                                </tr>
-                            </thead>
-                            <tbody id="quotaTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        <div class="filter-set">
+          <label>Period <select id="dateFilter"><option value="all">Entire export</option><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="28">Last 28 days</option></select></label>
+          <label>User <select id="userFilter"><option value="all">Everyone</option></select></label>
+          <label>Model <select id="modelFilter"><option value="all">All models</option></select></label>
+          <button id="resetFilters" class="text-button">Reset</button>
         </div>
+      </div>
 
-        <!-- Modal Windows -->
-        <!-- Models Modal -->
-        <div id="models-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Models Usage Details</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <table id="modelsDetailTable">
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th>Total Requests</th>
-                                <th>Percentage</th>
-                            </tr>
-                        </thead>
-                        <tbody id="modelsDetailTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+      <div class="context-note"><span>◎</span><span><strong>Read this as adoption, not quotas.</strong> GitHub’s new activity export reports user/day totals. Model and feature charts are nested breakdowns; they should not be added together with the headline totals.</span></div>
 
-        <!-- Users Modal -->
-        <div id="users-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>User Activity Details</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <table id="usersDetailTable">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Total Requests</th>
-                                <th>Percentage</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersDetailTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+      <section class="metric-grid">
+        <article class="metric"><p>Active seats</p><strong id="activeUsers">—</strong><span id="activeUsersNote">of reported users</span></article>
+        <article class="metric"><p>Engagement</p><strong id="engagementRate">—</strong><span>reported users active in period</span></article>
+        <article class="metric"><p>Agent adoption</p><strong id="agentRate">—</strong><span id="agentNote">of active seats</span></article>
+        <article class="metric"><p>Chat adoption</p><strong id="chatRate">—</strong><span>of active seats</span></article>
+        <article class="metric"><p>Accepted changes</p><strong id="acceptedCode">—</strong><span id="acceptedNote">accepted activities</span></article>
+        <article class="metric"><p>AI credits used</p><strong id="creditsUsed">—</strong><span>reported consumption</span></article>
+        <article class="metric"><p>Dormant seats <span class="info-tip" tabindex="0" title="People reported in the current selection with zero interactions, code generation, or acceptances. Change the period filter above to check dormancy over a different window — select Entire export to find seats worth reclaiming.">ⓘ</span></p><strong id="dormantSeats">—</strong><span id="dormantNote">of reported seats</span></article>
+      </section>
 
-        <!-- Model Distribution Modal -->
-        <div id="model-distribution-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Model Distribution Details</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div id="modelDistributionDetails">
-                        <p>Click on a model segment in the chart to see user details for that model.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <section class="insight-grid">
+        <article class="insight"><p class="eyebrow">AUTO ROUTING BY MODE <span class="info-tip" tabindex="0" title="Percentage of model-attributed code generation using the Auto model within Agent or Ask mode. Features without either label are excluded.">ⓘ</span></p><h3 id="autoRate">—</h3><p id="autoNarrative">Load data to compare Auto selection in Agent and Ask mode.</p></article>
+        <article class="insight"><p class="eyebrow">ADOPTION MOMENTUM</p><h3 id="momentum">—</h3><p id="momentumNarrative">Activity trend will appear here.</p></article>
+        <article class="insight"><p class="eyebrow">LEADING GITHUB COPILOT FEATURE</p><h3 id="workflow">—</h3><p id="workflowNarrative">Feature activity will appear here.</p></article>
+      </section>
 
-        <!-- Quota Users Modal -->
-        <div id="quota-users-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Quota Usage Details</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <table id="quotaUsersDetailTable">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Total Requests</th>
-                                <th>Monthly Quota</th>
-                                <th>Usage %</th>
-                                <th>Status</th>
-                                <th>Remaining Quota</th>
-                            </tr>
-                        </thead>
-                        <tbody id="quotaUsersDetailTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+      <section class="chart-grid">
+        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">DAILY PULSE</p><h3>Interactions and code generation</h3></div></div><canvas id="activityChart"></canvas></article>
+        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">MODEL CHOICE</p><h3>Daily routing — Auto versus named models</h3></div><span class="muted">model-attributed generation activity</span></div><canvas id="routingTrendChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Auto share by interaction mode</h3></div><span class="muted">% of generation</span></div><canvas id="modeRoutingChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">REPEAT USE</p><h3>How often people return</h3></div><span class="muted">active days</span></div><canvas id="repeatUseChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">BREAKDOWN</p><h3>Model, feature and language mix</h3></div><div class="dim-toggle" id="breakdownToggle"><button class="dim-btn active" data-dim="model">Model</button><button class="dim-btn" data-dim="feature">Feature</button><button class="dim-btn" data-dim="language">Language</button></div></div><canvas id="breakdownChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">ENVIRONMENTS</p><h3>IDE activity</h3></div></div><canvas id="ideChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">PRODUCT SURFACES</p><h3>People using each surface</h3></div></div><canvas id="surfaceChart"></canvas></article>
+        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">CODE CHANGES</p><h3>Agent-initiated vs user-initiated changes, by person <span class="info-tip" tabindex="0" title="Total lines added and deleted, attributed from GitHub's feature labels. Agent-initiated includes agent, edit, and custom modes; user-initiated includes code completion and non-agent chat actions.">ⓘ</span></h3></div><span class="muted" id="agentContributionNote"></span></div><canvas id="locChart"></canvas></article>
+        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">ADOPTION</p><h3>Most active people</h3></div><span class="muted">by interactions</span></div><canvas id="peopleChart"></canvas></article>
+      </section>
 
-        <!-- Quota Breakdown Modal -->
-        <div id="quota-breakdown-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>User Request Breakdown Details</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <table id="quotaBreakdownDetailTable">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Normal Requests</th>
-                                <th>Exceeding Requests</th>
-                                <th>Total Requests</th>
-                                <th>Usage %</th>
-                            </tr>
-                        </thead>
-                        <tbody id="quotaBreakdownDetailTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quota Distribution Modal -->
-        <div id="quota-distribution-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Quota Distribution Details</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div id="quotaDistributionDetails">
-                        <p>Click on a segment in the chart to see user details for that quota category.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quota Near Limit Modal -->
-        <div id="quota-near-limit-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Users Near Limit (80-100%)</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <table id="quotaNearLimitDetailTable">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Total Requests</th>
-                                <th>Monthly Quota</th>
-                                <th>Usage %</th>
-                                <th>Status</th>
-                                <th>Remaining Quota</th>
-                            </tr>
-                        </thead>
-                        <tbody id="quotaNearLimitDetailTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quota Over Limit Modal -->
-        <div id="quota-over-limit-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Users Over Limit (>100%)</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <table id="quotaOverLimitDetailTable">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Total Requests</th>
-                                <th>Monthly Quota</th>
-                                <th>Usage %</th>
-                                <th>Requests Over Quota</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="quotaOverLimitDetailTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-
-    </div>
-
-    <script src="script.js"></script>
+      <section class="table-card">
+        <div class="card-heading"><div><p class="eyebrow">SEAT DETAIL</p><h3>People in the selected period</h3></div><div class="table-actions"><div class="dim-toggle" id="seatFilterToggle"><button class="dim-btn active" data-seat="all">All</button><button class="dim-btn" data-seat="active">Active</button><button class="dim-btn" data-seat="dormant">Dormant</button></div><input id="tableSearch" type="search" placeholder="Search people"></div></div>
+        <div class="table-wrap"><table><thead><tr><th class="sortable" data-sort="name">Person <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="days">Active days <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="idleDays">Last active <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="interactions">Interactions <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="generation">Generated <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="accepted">Accepted <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="acceptRate">Completion accept rate <span class="info-tip" tabindex="0" title="Accepted inline code completions divided by shown inline code completions. Chat and agent activity are excluded.">ⓘ</span> <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="agent">Agent <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="chat">Chat <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="credits">Credits <span class="sort-indicator">↕</span></th></tr></thead><tbody id="peopleTable"></tbody></table></div>
+      </section>
+    </section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
 </body>
 </html>
