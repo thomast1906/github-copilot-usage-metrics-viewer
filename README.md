@@ -7,6 +7,7 @@ A private, browser-only dashboard for the current GitHub Copilot activity export
 - Seat engagement: reported vs active people, chat and agent adoption
 - Daily interactions and code-generation activity
 - Model routing, including **Auto vs named model** totals and a day-by-day comparison
+- Auto-routing share by Agent and Ask mode, plus repeat-use segments
 - Product-surface adoption across chat, agent, CLI, coding agent, cloud agent, and the Copilot app
 - Feature, language and IDE activity
 - Accepted activity, lines added, and reported AI credit use

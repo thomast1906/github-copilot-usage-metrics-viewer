@@ -59,7 +59,7 @@
       </section>
 
       <section class="insight-grid">
-        <article class="insight"><p class="eyebrow">MODEL ROUTING</p><h3 id="autoRate">—</h3><p id="autoNarrative">Load data to see how often Auto is selected versus a named model.</p></article>
+        <article class="insight"><p class="eyebrow">AUTO ROUTING BY MODE</p><h3 id="autoRate">—</h3><p id="autoNarrative">Load data to compare Auto selection in Agent and Ask mode.</p></article>
         <article class="insight"><p class="eyebrow">ADOPTION MOMENTUM</p><h3 id="momentum">—</h3><p id="momentumNarrative">Activity trend will appear here.</p></article>
         <article class="insight"><p class="eyebrow">LEADING COPILOT FEATURE</p><h3 id="workflow">—</h3><p id="workflowNarrative">Feature activity will appear here.</p></article>
       </section>
@@ -67,6 +67,8 @@
       <section class="chart-grid">
         <article class="card wide"><div class="card-heading"><div><p class="eyebrow">DAILY PULSE</p><h3>Interactions and code generation</h3></div></div><canvas id="activityChart"></canvas></article>
         <article class="card wide"><div class="card-heading"><div><p class="eyebrow">MODEL CHOICE</p><h3>Daily routing — Auto versus named models</h3></div><span class="muted">model-attributed generation activity</span></div><canvas id="routingTrendChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Auto share by interaction mode</h3></div><span class="muted">% of generation</span></div><canvas id="modeRoutingChart"></canvas></article>
+        <article class="card"><div class="card-heading"><div><p class="eyebrow">REPEAT USE</p><h3>How often people return</h3></div><span class="muted">active days</span></div><canvas id="repeatUseChart"></canvas></article>
         <article class="card"><div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Generation by model</h3></div></div><canvas id="modelChart"></canvas></article>
         <article class="card"><div class="card-heading"><div><p class="eyebrow">WORKFLOWS</p><h3>Feature mix</h3></div></div><canvas id="featureChart"></canvas></article>
         <article class="card"><div class="card-heading"><div><p class="eyebrow">LANGUAGES</p><h3>Generated code by language</h3></div></div><canvas id="languageChart"></canvas></article>
@@ -76,8 +78,8 @@
       </section>
 
       <section class="table-card">
-        <div class="card-heading"><div><p class="eyebrow">SEAT DETAIL</p><h3>People in the selected period</h3></div><input id="tableSearch" type="search" placeholder="Search people"></div>
-        <div class="table-wrap"><table><thead><tr><th>Person</th><th>Active days</th><th>Interactions</th><th>Generated</th><th>Accepted</th><th>Agent</th><th>Chat</th><th>Credits</th></tr></thead><tbody id="peopleTable"></tbody></table></div>
+        <div class="card-heading"><div><p class="eyebrow">SEAT DETAIL</p><h3>People in the selected period</h3></div><div class="table-actions"><input id="tableSearch" type="search" placeholder="Search people"></div></div>
+        <div class="table-wrap"><table><thead><tr><th class="sortable" data-sort="name">Person <span>↕</span></th><th class="sortable" data-sort="days">Active days <span>↕</span></th><th class="sortable" data-sort="interactions">Interactions <span>↕</span></th><th class="sortable" data-sort="generation">Generated <span>↕</span></th><th class="sortable" data-sort="accepted">Accepted <span>↕</span></th><th class="sortable" data-sort="agent">Agent <span>↕</span></th><th class="sortable" data-sort="chat">Chat <span>↕</span></th><th class="sortable" data-sort="credits">Credits <span>↕</span></th></tr></thead><tbody id="peopleTable"></tbody></table></div>
       </section>
     </section>
   </main>
