@@ -1,6 +1,19 @@
 # GitHub Copilot Signals Dashboard
 
-A private, browser-only dashboard for the current GitHub GitHub Copilot export. It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s newer export.
+A private, browser-based analytics viewer for GitHub Copilot usage exports. It turns user-level activity data into adoption, workflow, model-routing, and code-generation signals—without sending the export to a server.
+
+It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s current Copilot usage metrics export.
+
+## What this product is
+
+This is not a Premium Requests or monthly-quota tracker. It is a self-service companion dashboard for exploring Copilot usage and adoption data at a person, model, feature, and product-surface level.
+
+Use it to understand questions such as:
+
+- Is Copilot adoption broad and sustained, or concentrated among a few people?
+- How much activity is routed through Auto versus named models?
+- Which Copilot surfaces and workflows are actually being used?
+- How do agent-initiated and user-initiated code changes compare?
 
 ## What it shows
 
@@ -15,7 +28,7 @@ A private, browser-only dashboard for the current GitHub GitHub Copilot export. 
 - Accepted activity, lines added, and reported AI credit use
 - A per-person table for the selected period
 
-The dashboard deliberately does not present the new export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
+The dashboard deliberately does not present the export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
 
 ## Use it
 
