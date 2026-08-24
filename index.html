@@ -49,6 +49,9 @@
 
       <div class="context-note"><span>◎</span><span><strong>Read this as adoption, not quotas.</strong> GitHub’s new activity export reports user/day totals. Model and feature charts are nested breakdowns; they should not be added together with the headline totals.</span></div>
 
+      <nav class="dashboard-tabs" id="dashboardTabs" aria-label="Dashboard views" role="tablist"><button class="dashboard-tab active" id="overviewTab" data-tab="overview" role="tab" aria-selected="true" aria-controls="overviewPanel">Overview</button><button class="dashboard-tab" id="peopleTab" data-tab="people" role="tab" aria-selected="false" aria-controls="peoplePanel">People signals</button></nav>
+
+      <div id="overviewPanel" class="dashboard-panel" role="tabpanel" aria-labelledby="overviewTab">
       <section class="metric-grid">
         <article class="metric"><p>Active seats</p><strong id="activeUsers">—</strong><span id="activeUsersNote">of reported users</span></article>
         <article class="metric"><p>Engagement</p><strong id="engagementRate">—</strong><span>reported users active in period</span></article>
@@ -76,11 +79,28 @@
         <article class="card wide"><div class="card-heading"><div><p class="eyebrow">CODE CHANGES</p><h3>Agent-initiated vs user-initiated changes, by person <span class="info-tip" tabindex="0" title="Total lines added and deleted, attributed from GitHub's feature labels. Agent-initiated includes agent, edit, and custom modes; user-initiated includes code completion and non-agent chat actions.">ⓘ</span></h3></div><span class="muted" id="agentContributionNote"></span></div><canvas id="locChart"></canvas></article>
         <article class="card wide"><div class="card-heading"><div><p class="eyebrow">ADOPTION</p><h3>Most active people</h3></div><span class="muted">by interactions</span></div><canvas id="peopleChart"></canvas></article>
       </section>
+      </div>
+
+      <div id="peoplePanel" class="dashboard-panel" role="tabpanel" aria-labelledby="peopleTab" hidden>
+      <section class="table-card people-signals">
+        <div class="card-heading"><div><p class="eyebrow">PEOPLE SIGNALS</p><h3>Model choices and adoption journey</h3></div><span class="muted">Model values are attributed activity, not billing usage.</span></div>
+        <div class="signal-grid">
+          <div class="signal-panel"><h4>Who uses Auto?</h4><p>Compare Auto routing, named-model choice, mode split, and recent movement by person.</p><div class="table-wrap"><table><thead><tr><th class="signal-sortable" data-table="model" data-sort="name">Person <span>↕</span></th><th class="signal-sortable" data-table="model" data-sort="behaviour">Model use <span>↕</span></th><th class="signal-sortable" data-table="model" data-sort="autoShare">Auto share <span>↕</span></th><th class="signal-sortable" data-table="model" data-sort="agentShare">Agent / Ask Auto <span>↕</span></th><th class="signal-sortable" data-table="model" data-sort="topNamed">Top named model <span>↕</span></th><th class="signal-sortable" data-table="model" data-sort="delta">Recent change <span>↕</span></th></tr></thead><tbody id="modelPeopleTable"></tbody></table></div></div>
+          <div class="signal-panel"><h4>Adoption and retention</h4><p>First and last observed activity, recent streaks, and Copilot surfaces tried.</p><div class="table-wrap"><table><thead><tr><th class="signal-sortable" data-table="journey" data-sort="name">Person <span>↕</span></th><th class="signal-sortable" data-table="journey" data-sort="firstObserved">First observed <span>↕</span></th><th class="signal-sortable" data-table="journey" data-sort="lastObserved">Last active <span>↕</span></th><th class="signal-sortable" data-table="journey" data-sort="streak">Streak <span>↕</span></th><th class="signal-sortable" data-table="journey" data-sort="surfaces">Surfaces tried <span>↕</span></th></tr></thead><tbody id="journeyPeopleTable"></tbody></table></div></div>
+        </div>
+      </section>
+
+      <section class="table-card opportunities">
+        <div class="card-heading"><div><p class="eyebrow">ENABLEMENT QUEUE</p><h3>People to support next</h3></div><div class="table-actions"><label class="sr-only" for="opportunityFilter">Opportunity type</label><select id="opportunityFilter"><option value="all">All opportunities</option><option value="inactive">Inactive seats</option><option value="chat">Chat → Agent</option><option value="advanced">Agent → advanced surfaces</option><option value="acceptance">Completion acceptance</option><option value="falling">Falling activity</option></select><button id="exportOpportunities" class="button secondary">Export list</button></div></div>
+        <p class="muted opportunity-note">Signals are prompts for enablement conversations, not performance ratings. “Falling activity” compares the later and earlier halves of the selected period.</p>
+        <div class="table-wrap"><table><thead><tr><th class="signal-sortable" data-table="opportunity" data-sort="name">Person <span>↕</span></th><th class="signal-sortable" data-table="opportunity" data-sort="title">Opportunity <span>↕</span></th><th class="signal-sortable" data-table="opportunity" data-sort="signal">Signal <span>↕</span></th><th class="signal-sortable" data-table="opportunity" data-sort="next">Suggested next step <span>↕</span></th></tr></thead><tbody id="opportunityTable"></tbody></table></div>
+      </section>
 
       <section class="table-card">
         <div class="card-heading"><div><p class="eyebrow">SEAT DETAIL</p><h3>People in the selected period</h3></div><div class="table-actions"><div class="dim-toggle" id="seatFilterToggle"><button class="dim-btn active" data-seat="all">All</button><button class="dim-btn" data-seat="active">Active</button><button class="dim-btn" data-seat="dormant">Dormant</button></div><input id="tableSearch" type="search" placeholder="Search people"></div></div>
         <div class="table-wrap"><table><thead><tr><th class="sortable" data-sort="name">Person <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="days">Active days <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="idleDays">Last active <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="interactions">Interactions <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="generation">Generated <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="accepted">Accepted <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="acceptRate">Completion accept rate <span class="info-tip" tabindex="0" title="Accepted inline code completions divided by shown inline code completions. Chat and agent activity are excluded.">ⓘ</span> <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="completion">Code completion <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="agent">Agent <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="chat">Chat <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="cli">CLI <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="credits">Credits <span class="sort-indicator">↕</span></th></tr></thead><tbody id="peopleTable"></tbody></table></div>
       </section>
+      </div>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>

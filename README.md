@@ -20,6 +20,8 @@ Use it to understand questions such as:
 - Seat engagement: reported vs active people, chat and agent adoption
 - Daily interactions and code-generation activity
 - Model routing, including **Auto vs named model** totals and a day-by-day comparison
+- Per-person Auto routing, named-model preference, Agent/Ask split, and recent routing movement
+- Model-use segments: Auto only, one named model, or multiple named models used
 - Auto-routing share by Agent and Ask mode, plus repeat-use segments
 - Product-surface adoption across chat, agent, CLI, coding agent, cloud agent, and the Copilot app
 - Feature, language and IDE activity, in a single dimension-toggled breakdown panel
@@ -27,6 +29,8 @@ Use it to understand questions such as:
 - Inline-completion acceptance rate, per person
 - Accepted activity, lines added, and reported AI credit use
 - A per-person table for the selected period
+- Adoption and retention signals: first and last observed activity, active streaks, and product surfaces tried
+- Filterable, exportable enablement opportunities for inactive seats, Chat-to-Agent progression, advanced-agent adoption, low completion acceptance, and falling activity
 
 The dashboard deliberately does not present the export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
 
