@@ -31,8 +31,23 @@ Use it to understand questions such as:
 - A per-person table for the selected period
 - Adoption and retention signals: first and last observed activity, active streaks, and product surfaces tried
 - Filterable, exportable enablement opportunities for inactive seats, Chat-to-Agent progression, advanced-agent adoption, low completion acceptance, and falling activity
+- One shared person search across the model-routing, adoption/retention, and enablement queue tables in the People signals tab
+- A shareable link to the current tab and enablement-queue filter (`?tab=people&opportunity=chat`)
 
 The dashboard deliberately does not present the export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
+
+## Enablement queue thresholds
+
+The "People to support next" queue in the People signals tab flags people using fixed, documented rules so the signals are reproducible and explainable in a 1:1 or team conversation:
+
+- **Inactive seat** — no activity recorded in the selected period.
+- **Chat → Agent** — active, used Chat, but no Agent activity recorded.
+- **Agent → advanced surfaces** — used Agent, but hasn't tried Copilot CLI, coding agent, cloud agent, or the Copilot app yet.
+- **Completion acceptance** — at least 20 inline completions shown, with an acceptance rate under 25%.
+- **Falling activity** — at least 6 interactions in the first half of the selected period, dropping to half or less in the second half.
+- **Auto trend (model routing)** — change in Auto share between the first and later halves of the selected period. Positive values mean Auto's share increased and negative values mean it decreased; `pts` means percentage points, not a percentage change. It is only shown when a person has at least 10 combined Auto + named model events across both halves.
+
+These thresholds are intentionally simple constants in `script.js` (`renderPeopleSignals`) rather than configurable settings, so they can be tuned there if your org's activity volumes differ. The same explanations are available in the Enablement Queue and by hovering over the "Auto trend" column header.
 
 ## Use it
 
