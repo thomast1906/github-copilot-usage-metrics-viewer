@@ -18,7 +18,7 @@ Use it to understand questions such as:
 ## What it shows
 
 - Seat engagement: reported vs active people, chat and agent adoption
-- Daily interactions and code-generation activity
+- Daily interactions and code-generation activity counts
 - Model routing, including **Auto vs named model** totals and a day-by-day comparison
 - Per-person Auto routing, named-model preference, Agent/Ask split, and recent routing movement
 - Model-use segments: Auto only, one named model, or multiple named models used
@@ -27,9 +27,9 @@ Use it to understand questions such as:
 - Feature, language and IDE activity, in a single dimension-toggled breakdown panel
 - Agent-initiated vs user-initiated code changes per person — split using the same agent/edit/custom-mode definition GitHub's own dashboard uses for "Agent Contribution", but broken out by person instead of only as an org-wide number
 - Inline-completion acceptance rate, per person
-- Accepted activity, lines added, and reported AI credit use
+- Acceptance activity counts, accepted-change LOC, and reported AI credit use
 - A per-person table for the selected period
-- Adoption and retention signals: first and last observed activity, active streaks, and product surfaces tried
+- Adoption and retention signals: first/last active dates, current active streaks, and product surfaces tried; relative dates are measured from the export end date, not today
 - Filterable, exportable enablement opportunities for inactive seats, Chat-to-Agent progression, advanced-agent adoption, low completion acceptance, and falling activity
 - One shared person search across the model-routing, adoption/retention, and enablement queue tables in the People signals tab
 - A shareable link to the current tab and enablement-queue filter (`?tab=people&opportunity=chat`)
@@ -38,7 +38,7 @@ The dashboard deliberately does not present the export as monthly quota data. It
 
 ## Enablement queue thresholds
 
-The "People to support next" queue in the People signals tab flags people using fixed, documented rules so the signals are reproducible and explainable in a 1:1 or team conversation:
+The "People to support next" queue in the People signals tab flags people using fixed, documented rules so the signals are reproducible and explainable in an enablement conversation. These signals are prompts for support, not performance ratings:
 
 - **Inactive seat** — no activity recorded in the selected period.
 - **Chat → Agent** — active, used Chat, but no Agent activity recorded.
@@ -52,8 +52,8 @@ These thresholds are intentionally simple constants in `script.js` (`renderPeopl
 ## Use it
 
 1. Open the site (GitHub Pages or a local static server).
-2. Select every `part-*` file from a single GitHub GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
-3. Use the period, person and model filters to explore the data.
+2. Select every `part-*` file from a single GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
+3. Use the period and model filters to explore the data.
 
 All parsing and analytics happen locally in the browser; uploaded exports are not sent anywhere.
 
