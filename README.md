@@ -49,6 +49,16 @@ The "People to support next" queue in the People signals tab flags people using 
 
 These thresholds are intentionally simple constants in `script.js` (`renderPeopleSignals`) rather than configurable settings, so they can be tuned there if your org's activity volumes differ. The same explanations are available in the Enablement Queue and by hovering over the "Auto trend" column header.
 
+## Get your GitHub Copilot export
+
+1. On GitHub.com, open your enterprise or organisation.
+2. Go to **Insights** → **Copilot usage**.
+3. Select **Export JSON**.
+4. Download every `part-*.ndjson` or `part-*.json` file from that single export.
+5. Load all of those files together in this dashboard.
+
+Access to the export requires the Copilot usage-metrics policy to be enabled and an eligible enterprise or organisation role. See [GitHub’s instructions for viewing usage metrics and exporting data](https://docs.github.com/en/copilot/how-tos/administer-copilot/view-usage-and-adoption).
+
 ## Use it
 
 1. Open the site (GitHub Pages or a local static server).
