@@ -18,6 +18,8 @@ Use it to understand questions such as:
 ## What it shows
 
 - Seat engagement: reported vs active people, chat and agent adoption
+- A cumulative adoption funnel from reported seats through Chat, Agent, and advanced-agent surfaces, with stage drop-offs
+- A weekly cohort-retention heatmap for the latest 16 cohorts, showing whether newly active people return in each of the following eight weeks
 - Daily interactions and code-generation activity counts
 - Model routing, including **Auto vs named model** totals and a day-by-day comparison
 - Per-person Auto routing, named-model preference, Agent/Ask split, and recent routing movement
@@ -35,6 +37,22 @@ Use it to understand questions such as:
 - A shareable link to the current tab and enablement-queue filter (`?tab=people&opportunity=chat`)
 
 The dashboard deliberately does not present the export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
+
+## Adoption funnel and cohort retention
+
+Both visuals reflect the current period and model filters. Applying a model filter makes them a view of the matching model-attributed records, rather than an all-product adoption measure.
+
+The funnel counts people cumulatively:
+
+- **Reported seats** — distinct people represented in the current selection.
+- **Active** — reported people with at least one interaction, code-generation, or acceptance event.
+- **Chat users** — active people with Chat activity.
+- **Agent users** — active Chat users with Agent activity.
+- **Advanced-surface users** — active Chat and Agent users who also used Copilot CLI, coding agent, cloud agent, or the Copilot app.
+
+Each deeper stage requires the criteria of the previous stage, so the funnel is always decreasing. It shows a comparable enablement path; it does not prove that each person used the surfaces in that chronological order.
+
+The cohort-retention heatmap groups people by the Monday of their first active week **within the current selection**. The number beside a cohort is its size. Week 0 is therefore always 100%; each later cell is the percentage of that original group with any activity during that particular week. A `0%` cell means nobody in that cohort was active in that week, not that nobody ever returned. A `—` cell means the week falls after the latest available activity week in the selection.
 
 ## Enablement queue thresholds
 
