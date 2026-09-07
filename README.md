@@ -12,9 +12,9 @@ GitHub's aggregate Copilot dashboards answer "how much is Copilot used, org-wide
 
 ## The three views
 
-- **Overview** — the leadership view. Headline adoption KPIs, adoption depth (GitHub's own `ai_adoption_phase` cohorts, aggregated), agent-contribution distribution, a Copilot surface adoption funnel, reported Auto-vs-named model routing, and clickable enablement opportunities.
+- **Overview** — the decision view. It starts with an adoption readout and a ranked, clickable action queue, then shows adoption depth and agent contribution. Product-surface and model-routing detail is available as supporting evidence.
 - **People** — the operational view. A searchable, filterable, sortable table of every reported person with phase, consistency, agent share, reported Auto share, surfaces, completion acceptance, credits and last-active date. Selecting a person opens a detail drawer with their full adoption profile.
-- **Core Data** — the existing raw-telemetry exploration window: daily activity, model/feature/language breakdowns, IDE mix, and per-person agent vs. user LoC. Kept because exploring the raw export is still useful on its own.
+- **Data explorer** — the raw-telemetry evidence view: daily activity, model/feature/language breakdowns, IDE mix, and per-person agent vs. user LoC. It is for investigating a pattern surfaced elsewhere, not for adding nested measures together.
 
 ## Reported people, not licensed seats
 
@@ -28,7 +28,7 @@ GitHub's `auto` model routing entry reflects only what the export reports as `au
 
 1. Open the site (GitHub Pages or a local static server).
 2. Select every `part-*` file from a single GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
-3. Use the period, person and model filters to explore Overview, People and Core Data.
+3. Start on Overview: select an action-queue cohort to see the people behind it. Use People for investigation/export and Data explorer for raw evidence.
 
 The included `data_example.json` is a fully anonymised, 2,109-record activity-export sample in the per-user metrics shape, with identifying and partition metadata removed and records wrapped in a JSON array. Load it with **Explore included sample**.
 

@@ -33,9 +33,9 @@
     </section>
 
     <nav class="view-tabs" role="tablist" aria-label="Dashboard views" hidden id="viewTabs">
-      <button class="view-tab" role="tab" id="tab-overview" aria-controls="view-overview" aria-selected="true" data-view="overview">Overview</button>
+      <button class="view-tab" role="tab" id="tab-overview" aria-controls="view-overview" aria-selected="true" data-view="overview">Decision brief</button>
       <button class="view-tab" role="tab" id="tab-people" aria-controls="view-people" aria-selected="false" data-view="people" tabindex="-1">People</button>
-      <button class="view-tab" role="tab" id="tab-coredata" aria-controls="view-coredata" aria-selected="false" data-view="coredata" tabindex="-1">Core Data</button>
+      <button class="view-tab" role="tab" id="tab-coredata" aria-controls="view-coredata" aria-selected="false" data-view="coredata" tabindex="-1">Data explorer</button>
     </nav>
 
     <section id="dashboard" hidden>
@@ -49,57 +49,75 @@
           <label>Period <select id="dateFilter"><option value="all">Entire export</option><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="28" selected>Last 28 days</option></select></label>
           <label>Person <select id="userFilter"><option value="all">Everyone</option></select></label>
           <label>Model <select id="modelFilter"><option value="all">All models</option></select></label>
+          <button id="shareView" class="text-button">Copy view link</button>
           <button id="resetFilters" class="text-button">Reset</button>
         </div>
       </div>
 
       <div class="context-note"><span>◎</span><span><strong>Read this as adoption, not quotas.</strong> GitHub’s activity export reports user/day totals. Model and feature charts are nested breakdowns; they should not be added together with the headline totals.</span></div>
+      <details class="data-confidence" id="dataConfidence">
+        <summary><span>Data confidence</span><span id="dataConfidenceSummary">Checking the fields in this export…</span></summary>
+        <ul id="dataConfidenceList"></ul>
+      </details>
 
       <section id="view-overview" class="view" role="tabpanel" aria-labelledby="tab-overview">
-        <section class="metric-grid" id="headlineKpis">
+        <section class="adoption-story" aria-labelledby="adoptionStoryHeading">
+          <div>
+            <p class="eyebrow">ADOPTION READOUT</p>
+            <h3 id="adoptionStoryHeading">Your adoption story</h3>
+            <p class="adoption-story-headline" id="adoptionStoryHeadline">Loading the selected period…</p>
+          </div>
+          <div class="adoption-story-next">
+            <p class="eyebrow">WHERE TO LOOK NEXT</p>
+            <p id="adoptionStoryNext">—</p>
+          </div>
+        </section>
+        <section class="action-queue" aria-labelledby="actionQueueHeading">
+          <div class="card-heading"><div><p class="eyebrow">TAKE ACTION</p><h3 id="actionQueueHeading">The next conversations to have</h3></div><span class="muted">Select a group to open People</span></div>
+          <ol id="actionQueueList"></ol>
+        </section>
+
+        <p class="overview-section-label">Where adoption stands now</p>
+        <section class="decision-metrics" aria-label="Key adoption measures">
           <article class="metric"><p>Active people</p><strong id="kpiActive">—</strong><span id="kpiActiveNote">of reported people</span></article>
           <article class="metric"><p>Agent-first</p><strong id="kpiAgentFirst">—</strong><span id="kpiAgentFirstNote">Phase 2–3</span></article>
           <article class="metric"><p>Sustained use</p><strong id="kpiSustained">—</strong><span id="kpiSustainedNote">6+ active days</span></article>
-          <article class="metric"><p>Agent contribution</p><strong id="kpiAgentContribution">—</strong><span>of agent + user LoC</span></article>
-          <article class="metric" id="kpiAutoCard"><p>Reported Auto in Agent</p><strong id="kpiAuto">—</strong><span>Agent workflows</span></article>
-          <article class="metric"><p>No observed activity</p><strong id="kpiNoActivity">—</strong><span id="kpiNoActivityNote">of reported people</span></article>
         </section>
 
-        <p class="positioning-line">GitHub tells you how Copilot is being used across your organisation. Copilot Signals shows you how adoption differs between your people.</p>
-
-        <section class="card wide" id="adoptionDepthCard">
+        <section class="overview-support-grid">
+        <section class="card" id="adoptionDepthCard">
           <div class="card-heading"><div><p class="eyebrow">ADOPTION DEPTH</p><h3>Latest reported phase per person</h3></div></div>
           <div id="adoptionDepthBars" class="depth-bars"></div>
           <p id="adoptionDepthMovement" class="muted"></p>
         </section>
 
-        <section class="card wide" id="agentDistributionCard">
+        <section class="card momentum-card">
+          <div class="card-heading"><div><p class="eyebrow">MOVEMENT</p><h3>What changed in this period</h3></div></div>
+          <p id="adoptionMomentumHeadline" class="momentum-headline">—</p>
+          <p id="adoptionMomentumDetail" class="muted">—</p>
+        </section>
+        </section>
+
+        <details class="supporting-evidence">
+          <summary><span>Supporting evidence</span><span>Metrics, product surfaces, and model routing</span></summary>
+        <section class="overview-support-grid">
+        <section class="card" id="agentDistributionCard">
           <div class="card-heading"><div><p class="eyebrow">AGENT-FIRST DEVELOPMENT</p><h3>Overall agent contribution: <span id="agentDistributionOverall">—</span></h3></div></div>
           <div id="agentDistributionBars" class="depth-bars"></div>
           <button class="text-button" id="viewPeopleFromAgent">View people →</button>
         </section>
-
-        <section class="card wide" id="surfaceFunnelCard">
+        <section class="card" id="surfaceFunnelCard">
           <div class="card-heading"><div><p class="eyebrow">COPILOT SURFACE ADOPTION</p><h3>People using each surface</h3></div><span class="muted">of active people</span></div>
           <div id="surfaceFunnelBars" class="depth-bars"></div>
         </section>
 
-        <section class="card wide" id="modelRoutingCard" hidden>
+        <section class="card" id="modelRoutingCard" hidden>
           <div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Reported Auto versus named models</h3></div><span class="muted">GitHub may resolve Auto to the selected model; this reflects only what the export reports as <code>auto</code>.</span></div>
           <div id="modelRoutingBars" class="depth-bars"></div>
         </section>
 
-        <section class="card wide opportunity-grid" id="enablementCard">
-          <div>
-            <p class="eyebrow">ENABLEMENT OPPORTUNITIES</p>
-            <h4>Who might need a nudge</h4>
-            <ul class="opportunity-list" id="enablementList"></ul>
-          </div>
-          <div>
-            <h4>What each one means</h4>
-            <p class="muted" id="enablementExplainer">Click a row to open the matching people in the People view.</p>
-          </div>
         </section>
+        </details>
       </section>
 
       <section id="view-people" class="view" role="tabpanel" aria-labelledby="tab-people" hidden>
@@ -107,35 +125,42 @@
           <div class="card-heading">
             <div><p class="eyebrow">PEOPLE</p><h3>People in the selected period</h3></div>
             <div class="table-actions">
-              <div class="dim-toggle" id="peopleFilterToggle">
+              <details class="filter-menu" id="peopleFilterMenu">
+                <summary><span>Segment</span><strong id="peopleFilterLabel">All people</strong></summary>
+                <div class="dim-toggle" id="peopleFilterToggle" role="group" aria-label="People segment">
                 <button class="dim-btn active" data-filter="all">All</button>
                 <button class="dim-btn" data-filter="phase0">Phase 0</button>
                 <button class="dim-btn" data-filter="phase1">Phase 1</button>
                 <button class="dim-btn" data-filter="phase2">Phase 2</button>
                 <button class="dim-btn" data-filter="phase3">Phase 3</button>
                 <button class="dim-btn" data-filter="completionOnly">Completion-only</button>
+                <button class="dim-btn" data-filter="chat">Chat</button>
                 <button class="dim-btn" data-filter="agent">Agent</button>
                 <button class="dim-btn" data-filter="cli">CLI</button>
                 <button class="dim-btn" data-filter="cloudCodingAgent">Cloud/Coding Agent</button>
+                <button class="dim-btn" data-filter="copilotApp">Copilot App</button>
                 <button class="dim-btn" data-filter="autoAbove75">Auto &gt; 75%</button>
                 <button class="dim-btn" data-filter="noActivity">No observed activity</button>
                 <button class="dim-btn" data-filter="sustained">Sustained</button>
               </div>
-              <input id="peopleSearch" type="search" placeholder="Search people">
+              </details>
+              <label class="people-search"><span>Find a person</span><input id="peopleSearch" type="search" placeholder="Search people"></label>
+              <button id="exportPeople" class="text-button">Export CSV</button>
+              <p id="peopleFilterStatus" class="muted filter-status" aria-live="polite">Showing all people.</p>
             </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead><tr>
-                <th class="sortable" data-sort="name">Person <span class="sort-indicator">↕</span></th>
-                <th class="sortable" data-sort="phase">Phase <span class="sort-indicator">↕</span></th>
-                <th class="sortable" data-sort="consistency">Consistency <span class="sort-indicator">↕</span></th>
-                <th class="sortable" data-sort="agentShare">Agent share <span class="sort-indicator">↕</span></th>
-                <th class="sortable" data-sort="autoShare">Reported Auto share <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="name" tabindex="0" role="button">Person <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="phase" tabindex="0" role="button">Phase <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="consistency" tabindex="0" role="button">Consistency <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="agentShare" tabindex="0" role="button">Agent share <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="autoShare" tabindex="0" role="button">Reported Auto share <span class="sort-indicator">↕</span></th>
                 <th>Surfaces</th>
-                <th class="sortable" data-sort="acceptance">Completion acceptance <span class="sort-indicator">↕</span></th>
-                <th class="sortable" data-sort="credits">AI credits <span class="sort-indicator">↕</span></th>
-                <th class="sortable" data-sort="lastActive">Last active <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="acceptance" tabindex="0" role="button">Completion acceptance <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="credits" tabindex="0" role="button">AI credits <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="lastActive" tabindex="0" role="button">Last active <span class="sort-indicator">↕</span></th>
               </tr></thead>
               <tbody id="peopleTableBody"></tbody>
             </table>
@@ -145,15 +170,22 @@
       </section>
 
       <section id="view-coredata" class="view" role="tabpanel" aria-labelledby="tab-coredata" hidden>
+        <p class="coredata-intro">Supporting evidence for the adoption readout. Use this view to validate a pattern or investigate a person—not to add nested activity measures together.</p>
         <section class="chart-grid">
-          <article class="card wide"><div class="card-heading"><div><p class="eyebrow">DAILY PULSE</p><h3>Interactions and code generation</h3></div></div><canvas id="activityChart"></canvas></article>
+          <div class="explorer-heading wide"><p class="eyebrow">01 · PARTICIPATION OVER TIME</p><h3>Is use becoming broader, or simply busier?</h3></div>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">ACTIVITY VOLUME</p><h3>Interactions and code generation</h3></div><span class="muted">daily totals</span></div><canvas id="activityChart"></canvas></article>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">PARTICIPATION</p><h3>Daily active people and Agent users</h3></div><span class="muted">unique people</span></div><canvas id="dailyPeopleChart"></canvas></article>
           <article class="card wide"><div class="card-heading"><div><p class="eyebrow">MODEL CHOICE</p><h3>Daily routing — Auto versus named models</h3></div><span class="muted">model-attributed generation activity</span></div><canvas id="routingTrendChart"></canvas></article>
+          <div class="explorer-heading wide"><p class="eyebrow">02 · HOW PEOPLE USE COPILOT</p><h3>Look for repeatable behaviours, not vanity totals.</h3></div>
           <article class="card"><div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Auto share by interaction mode</h3></div><span class="muted">% of generation</span></div><canvas id="modeRoutingChart"></canvas></article>
           <article class="card"><div class="card-heading"><div><p class="eyebrow">REPEAT USE</p><h3>How often people return</h3></div><span class="muted">active days</span></div><canvas id="repeatUseChart"></canvas></article>
           <article class="card"><div class="card-heading"><div><p class="eyebrow">BREAKDOWN</p><h3>Model, feature and language mix</h3></div><div class="dim-toggle" id="breakdownToggle"><button class="dim-btn active" data-dim="model">Model</button><button class="dim-btn" data-dim="feature">Feature</button><button class="dim-btn" data-dim="language">Language</button></div></div><div class="breakdown-scroll"><div id="breakdownInner"><canvas id="breakdownChart"></canvas></div></div></article>
           <article class="card"><div class="card-heading"><div><p class="eyebrow">ENVIRONMENTS</p><h3>IDE activity</h3></div></div><canvas id="ideChart"></canvas></article>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">SURFACES</p><h3>Product-surface adoption</h3></div><span class="muted">people using each surface</span></div><canvas id="surfaceChart"></canvas></article>
+          <div class="explorer-heading wide"><p class="eyebrow">03 · INVESTIGATE THE OUTLIERS</p><h3>Use the charts to decide where a person-level conversation is warranted.</h3></div>
           <article class="card wide"><div class="card-heading"><div><p class="eyebrow">CODE CHANGES</p><h3>Agent-initiated vs user-initiated changes, by person <span class="info-tip" tabindex="0" title="Total lines added and deleted, attributed from GitHub's feature labels. Agent-initiated includes agent, edit, and custom modes; user-initiated includes code completion and non-agent chat actions.">ⓘ</span></h3></div><span class="muted" id="agentContributionNote"></span></div><canvas id="locChart"></canvas></article>
           <article class="card wide"><div class="card-heading"><div><p class="eyebrow">ADOPTION</p><h3>Most active people</h3></div><span class="muted">by interactions</span></div><canvas id="peopleChart"></canvas></article>
+          <article class="table-card wide"><div class="card-heading"><div><p class="eyebrow">PEOPLE DETAIL</p><h3>Core activity measures by person</h3></div></div><div class="table-wrap"><table><thead><tr><th>Person</th><th>Active days</th><th>Interactions</th><th>Generation</th><th>Accepted</th><th>Acceptance</th><th>Agent</th><th>Chat</th><th>CLI</th><th>AI credits</th></tr></thead><tbody id="corePeopleTable"></tbody></table></div></article>
         </section>
       </section>
     </section>

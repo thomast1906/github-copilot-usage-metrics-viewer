@@ -8,6 +8,7 @@ import {
   computeModelRouting,
   buildPeopleIndex, classifyEnablementOpportunities
 } from '../src/metrics.js';
+import { applyPeopleFilters } from '../src/people.js';
 
 function featureRow(user, features) {
   return { user_login: user, day: '2026-06-01', totals_by_feature: features };
@@ -16,6 +17,17 @@ function featureRow(user, features) {
 function modelFeatureRow(user, entries) {
   return { user_login: user, day: '2026-06-01', totals_by_model_feature: entries };
 }
+
+test('People surface and agent-contribution filters do not fall back to everyone', () => {
+  const people = new Map([
+    ['completion', { surfaces: { completion: true, chat: false, agent: false, cli: false, cloudCodingAgent: false, copilotApp: false }, agentContribution: { share: 0.1 } }],
+    ['chat', { surfaces: { completion: false, chat: true, agent: false, cli: false, cloudCodingAgent: false, copilotApp: false }, agentContribution: { share: 0.5 } }],
+    ['app', { surfaces: { completion: false, chat: false, agent: false, cli: false, cloudCodingAgent: false, copilotApp: true }, agentContribution: { share: 0.9 } }]
+  ]);
+  assert.deepEqual([...applyPeopleFilters(people, { activeFilter: 'chat' }).keys()], ['chat']);
+  assert.deepEqual([...applyPeopleFilters(people, { activeFilter: 'copilotApp' }).keys()], ['app']);
+  assert.deepEqual([...applyPeopleFilters(people, { activeFilter: 'agent80-100' }).keys()], ['app']);
+});
 
 // Task 1: observed activity, population, consistency
 

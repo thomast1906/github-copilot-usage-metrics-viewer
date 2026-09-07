@@ -1,4 +1,4 @@
-import { userLogin } from './metrics.js';
+import { userLogin, computeSurfaces } from './metrics.js';
 
 const charts = {};
 
@@ -71,6 +71,12 @@ function label(value) {
   return String(value).replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function escapeHtml(value) {
+  const div = document.createElement('div');
+  div.textContent = value;
+  return div.innerHTML;
+}
+
 function topN(o, n = 8) {
   const entries = Object.entries(o).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n);
   return { labels: entries.map((x) => label(x[0])), values: entries.map((x) => x[1]) };
@@ -126,9 +132,14 @@ export function renderCoreData(periodRows, allRows, { breakdownDim, selectedMode
   const byDay = {};
   const routing = { Agent: { auto: 0, named: 0 }, Ask: { auto: 0, named: 0 } };
   periodRows.forEach((row) => {
-    const day = byDay[row.day] || (byDay[row.day] = { interactions: 0, generation: 0, auto: 0, named: 0 });
+    const day = byDay[row.day] || (byDay[row.day] = { interactions: 0, generation: 0, auto: 0, named: 0, activePeople: new Set(), agentPeople: new Set() });
     day.interactions += Number(row.user_initiated_interaction_count || 0);
     day.generation += Number(row.code_generation_activity_count || 0);
+    const user = userLogin(row);
+    const usedAgent = row.used_agent || (row.totals_by_feature || []).some((feature) => /agent|custom/i.test(feature.feature || '') && Number(feature.code_generation_activity_count || 0) > 0);
+    const observedActivity = activity(row) > 0 || row.used_agent || row.used_chat || row.used_cli || row.used_copilot_app || row.used_copilot_coding_agent || row.used_copilot_cloud_agent;
+    if (observedActivity && user) day.activePeople.add(user);
+    if (usedAgent && user) day.agentPeople.add(user);
     (row.totals_by_model_feature || []).forEach((entry) => {
       if (selectedModel !== 'all' && entry.model !== selectedModel) return;
       const amount = Number(entry.code_generation_activity_count || 0);
@@ -157,6 +168,14 @@ export function renderCoreData(periodRows, allRows, { breakdownDim, selectedMode
     datasets: [
       { label: 'Interactions', data: days.map((d) => byDay[d].interactions), borderColor: '#83f1c5', backgroundColor: '#83f1c522', fill: true, tension: .35 },
       { label: 'Code generation', data: days.map((d) => byDay[d].generation), borderColor: '#7da8ff', tension: .35 }
+    ]
+  });
+
+  chart('dailyPeopleChart', 'line', {
+    labels: days,
+    datasets: [
+      { label: 'Active people', data: days.map((d) => byDay[d].activePeople.size), borderColor: '#83f1c5', backgroundColor: '#83f1c522', fill: true, tension: .35 },
+      { label: 'Agent users', data: days.map((d) => byDay[d].agentPeople.size), borderColor: '#ffb86b', backgroundColor: '#ffb86b18', fill: true, tension: .35 }
     ]
   });
 
@@ -195,6 +214,16 @@ export function renderCoreData(periodRows, allRows, { breakdownDim, selectedMode
 
   chart('ideChart', 'bar', topN(breakdown(periodRows, 'totals_by_ide', 'ide', 'user_initiated_interaction_count', selectedModel)));
 
+  const surfaces = computeSurfaces(periodRows);
+  const surfaceLabels = [
+    ['completion', 'Completion'], ['chat', 'Chat'], ['agent', 'Agent'], ['cli', 'CLI'],
+    ['cloudCodingAgent', 'Cloud/Coding Agent'], ['copilotApp', 'Copilot App']
+  ];
+  chart('surfaceChart', 'bar', {
+    labels: surfaceLabels.map(([, display]) => display),
+    values: surfaceLabels.map(([key]) => [...surfaces.values()].filter((surface) => surface[key]).length)
+  });
+
   const locPeople = Object.entries(peopleStats)
     .filter(([, p]) => p.agentLoc + p.userLoc > 0)
     .sort((a, b) => (b[1].agentLoc + b[1].userLoc) - (a[1].agentLoc + a[1].userLoc))
@@ -213,4 +242,14 @@ export function renderCoreData(periodRows, allRows, { breakdownDim, selectedMode
     : 'No LOC activity');
 
   chart('peopleChart', 'bar', topN(Object.fromEntries(Object.entries(peopleStats).map(([u, p]) => [u, p.interactions])), 12));
+
+  document.querySelector('#corePeopleTable').innerHTML = Object.entries(peopleStats)
+    .sort(([, a], [, b]) => b.interactions - a.interactions)
+    .map(([user, person]) => `<tr>
+      <td>${escapeHtml(user)}</td><td>${person.days}</td><td>${format(person.interactions)}</td>
+      <td>${format(person.generation)}</td><td>${format(person.accepted)}</td>
+      <td>${person.acceptRate >= 0 ? `${Math.round(person.acceptRate)}%` : '—'}</td>
+      <td>${person.agent ? 'Used' : '—'}</td><td>${person.chat ? 'Used' : '—'}</td>
+      <td>${person.cli ? 'Used' : '—'}</td><td>${format(person.credits)}</td>
+    </tr>`).join('') || '<tr><td colspan="10">No people match the current filters.</td></tr>';
 }

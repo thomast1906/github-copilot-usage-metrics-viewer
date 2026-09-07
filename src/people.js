@@ -6,20 +6,31 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
-const FILTER_PREDICATES = {
+export const FILTER_PREDICATES = {
   all: () => true,
   phase0: (p) => p.phase?.latest.phaseNumber === 0,
   phase1: (p) => p.phase?.latest.phaseNumber === 1,
   phase2: (p) => p.phase?.latest.phaseNumber === 2,
   phase3: (p) => p.phase?.latest.phaseNumber === 3,
   completionOnly: (p) => p.surfaces.completion && !p.surfaces.chat && !p.surfaces.agent && !p.surfaces.cli && !p.surfaces.cloudCodingAgent && !p.surfaces.copilotApp,
+  completion: (p) => p.surfaces.completion,
+  chat: (p) => p.surfaces.chat,
   agent: (p) => p.surfaces.agent,
   cli: (p) => p.surfaces.cli,
   cloudCodingAgent: (p) => p.surfaces.cloudCodingAgent,
+  copilotApp: (p) => p.surfaces.copilotApp,
   autoAbove75: (p) => p.autoShare !== null && p.autoShare > 0.75,
   noActivity: (p) => !p.active,
   sustained: (p) => p.consistency.tier === 'sustained'
 };
+
+for (const bucket of ['0-20', '20-40', '40-60', '60-80', '80-100']) {
+  FILTER_PREDICATES[`agent${bucket}`] = (p) => {
+    const percent = p.agentContribution.share === null ? null : p.agentContribution.share * 100;
+    const [lower, upper] = bucket.split('-').map(Number);
+    return percent !== null && percent >= lower && (upper === 100 ? percent <= upper : percent < upper);
+  };
+}
 
 export function applyPeopleFilters(peopleIndex, { search = '', activeFilter = 'all', opportunityUsers = null }) {
   const predicate = FILTER_PREDICATES[activeFilter] || FILTER_PREDICATES.all;
@@ -50,6 +61,7 @@ export function renderPeopleTable(filteredIndex, sort, onRowClick) {
   document.querySelectorAll('.sortable').forEach((th) => {
     const indicator = th.querySelector('.sort-indicator');
     indicator.textContent = th.dataset.sort === sort.key ? (sort.direction === 'desc' ? '↓' : '↑') : '↕';
+    th.setAttribute('aria-sort', th.dataset.sort === sort.key ? (sort.direction === 'desc' ? 'descending' : 'ascending') : 'none');
   });
   const rows = [...filteredIndex.entries()].sort((a, b) => sortComparator(a, b, sort));
   document.querySelector('#peopleTableBody').innerHTML = rows.map(([user, person]) => `
