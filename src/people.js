@@ -53,7 +53,7 @@ export function renderPeopleTable(filteredIndex, sort, onRowClick) {
   });
   const rows = [...filteredIndex.entries()].sort((a, b) => sortComparator(a, b, sort));
   document.querySelector('#peopleTableBody').innerHTML = rows.map(([user, person]) => `
-    <tr data-user="${escapeHtml(user)}">
+    <tr data-user="${escapeHtml(user)}" tabindex="0" role="button" aria-label="View details for ${escapeHtml(user)}">
       <td>${escapeHtml(user)}</td>
       <td>${person.phase ? PHASE_LABELS[person.phase.latest.phaseNumber] : '—'}</td>
       <td>${person.consistency.tier || '—'}</td>
@@ -67,6 +67,11 @@ export function renderPeopleTable(filteredIndex, sort, onRowClick) {
   `).join('') || '<tr><td colspan="9">No people match the current filters.</td></tr>';
   document.querySelectorAll('#peopleTableBody tr[data-user]').forEach((row) => {
     row.addEventListener('click', () => onRowClick(row.dataset.user));
+    row.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      onRowClick(row.dataset.user);
+    });
   });
 }
 
