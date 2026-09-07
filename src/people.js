@@ -1,5 +1,11 @@
 import { PHASE_LABELS } from './metrics.js';
 
+function escapeHtml(value) {
+  const div = document.createElement('div');
+  div.textContent = value;
+  return div.innerHTML;
+}
+
 const FILTER_PREDICATES = {
   all: () => true,
   phase0: (p) => p.phase?.latest.phaseNumber === 0,
@@ -41,10 +47,14 @@ function surfaceBadges(surfaces) {
 }
 
 export function renderPeopleTable(filteredIndex, sort, onRowClick) {
+  document.querySelectorAll('.sortable').forEach((th) => {
+    const indicator = th.querySelector('.sort-indicator');
+    indicator.textContent = th.dataset.sort === sort.key ? (sort.direction === 'desc' ? '↓' : '↑') : '↕';
+  });
   const rows = [...filteredIndex.entries()].sort((a, b) => sortComparator(a, b, sort));
   document.querySelector('#peopleTableBody').innerHTML = rows.map(([user, person]) => `
-    <tr data-user="${user}">
-      <td>${user}</td>
+    <tr data-user="${escapeHtml(user)}">
+      <td>${escapeHtml(user)}</td>
       <td>${person.phase ? PHASE_LABELS[person.phase.latest.phaseNumber] : '—'}</td>
       <td>${person.consistency.tier || '—'}</td>
       <td>${formatPercent(person.agentContribution.share)}</td>
@@ -88,7 +98,7 @@ export function openPersonDrawer(user, person, modelBreakdown) {
     .sort((a, b) => b[1] - a[1])
     .map(([model, count]) => {
       const percent = total ? Math.round((count / total) * 100) : 0;
-      return `<li>${model === 'auto' ? 'Auto' : model} <span>${percent}%</span></li>`;
+      return `<li>${model === 'auto' ? 'Auto' : escapeHtml(model)} <span>${percent}%</span></li>`;
     }).join('') || '<li>No model-attributed generation</li>';
 
   const host = document.querySelector('#personDrawer');
@@ -96,7 +106,7 @@ export function openPersonDrawer(user, person, modelBreakdown) {
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
     <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" id="drawerPanel">
       <button class="text-button drawer-close" id="drawerClose" aria-label="Close person detail">✕</button>
-      <h3 id="drawerTitle">${user}</h3>
+      <h3 id="drawerTitle">${escapeHtml(user)}</h3>
       <p class="muted">${person.phase ? PHASE_LABELS[person.phase.latest.phaseNumber] : 'No phase reported'}</p>
       <dl class="drawer-facts">
         <div><dt>Active days</dt><dd>${person.consistency.activeDays}</dd></div>

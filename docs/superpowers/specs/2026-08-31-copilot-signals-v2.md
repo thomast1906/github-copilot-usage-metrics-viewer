@@ -13,6 +13,24 @@ Use **GitHub Copilot Signals** in product chrome and documentation. Do not appen
 
 The product is a companion to GitHub's aggregate dashboards, not a replacement for them. Its distinctive job is to turn per-user export records into adoption depth, enablement opportunities, and coherent individual profiles.
 
+## Design rationale
+
+- **`ai_adoption_phase` is the strongest idea in this spec.** Riding a field
+  GitHub already computes, rather than inventing a bespoke adoption-maturity
+  score, is both less work and more defensible: the product surfaces GitHub's
+  own cohorting at a per-person grain GitHub doesn't show, instead of asking
+  users to trust a heuristic invented here.
+- **The seat/people terminology ban is deliberate risk management**, not just
+  a wording preference. GitHub's user-management API, not the usage export,
+  is the source of truth for seat assignment. Calling reported/active people
+  "seats" would be a factually wrong claim the first time someone checks it
+  against licensing data — the population terminology in this spec exists to
+  avoid that.
+- **Core Data is preserved, not deprecated by default.** The raw per-metric
+  breakdowns are useful on their own and removing them is out of scope for
+  this rewrite; that decision should be revisited later based on observed
+  usage, not decided speculatively now.
+
 ## Product questions
 
 The default experience must answer four questions:
@@ -182,6 +200,13 @@ Every opportunity is clickable and applies a People filter:
 - **High generation, low acceptance:** at least 20 shown completions and completion acceptance below 15%.
 
 Counts and thresholds appear in explanatory tooltips. A person may belong to multiple opportunities.
+
+The numeric thresholds above (25% reported Auto, 15% acceptance, the 5- and
+20-generation minimums, the 1–5-day "not sustained" window) are initial
+defaults, not calibrated values. They read as reasonable but have not been
+checked against a real organisation's distribution. Treat them as
+placeholders to revisit once the app has run against real export data, not as
+fixed product requirements.
 
 ## People view
 

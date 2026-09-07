@@ -890,6 +890,8 @@ export function classifyEnablementOpportunities(peopleIndex, routing) {
 
 Note: `lowAutoInAgent`'s "reported Auto share below 25%" threshold is applied against the person's **Agent-mode-only** auto share (`byUserAgentMode`), not their overall `autoShare`, because the opportunity is specifically about Agent-mode routing. This is a documented interpretation of a spec bullet that doesn't repeat the mode scope explicitly — flag it in code review if the product owner meant something else.
 
+Note: every numeric constant in this function (0.25, 0.15, the `>= 5` and `>= 20` generation floors, the 1–5-day sustained window) is an uncalibrated default carried over from the spec, not a tuned value. Implement them as named constants at the top of the module (not inline magic numbers) so they are easy to find and adjust once the app has run against a real organisation's export.
+
 - [ ] **Step 4: Run to verify pass**
 
 Run: `npm test`
