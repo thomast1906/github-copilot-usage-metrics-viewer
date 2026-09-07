@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A private, browser-based viewer for GitHub Copilot metrics exports.">
+  <meta name="description" content="Turn GitHub's raw Copilot usage export into user-level adoption and agentic-engineering insights — entirely in your browser.">
   <meta name="theme-color" content="#0b1220">
-  <title>GitHub Copilot Signals Dashboard</title>
+  <title>GitHub Copilot Signals</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,15 +15,15 @@
 <body>
   <main class="shell">
     <header class="hero">
-      <div class="brand"><span class="brand-mark">✦</span> GitHub Copilot Signals Dashboard</div>
-      <h1>See how teams are actually using GitHub Copilot.</h1>
-      <p>Turn GitHub’s detailed activity export into adoption, workflow, and model-routing signals. Processing stays entirely in your browser.</p>
+      <div class="brand"><span class="brand-mark">✦</span> GitHub Copilot Signals</div>
+      <h1>Understand who is adopting Copilot — and how deeply.</h1>
+      <p>GitHub tells you how Copilot is being used across your organisation. Copilot Signals shows you how adoption differs between your people — entirely in your browser, from GitHub's own usage export.</p>
     </header>
 
     <section id="uploadPanel" class="upload-panel">
       <div class="upload-icon">↥</div>
-      <h2>Load a GitHub GitHub Copilot export</h2>
-      <p>Choose one or more <code>part-*.json</code> or <code>part-*.ndjson</code> files from the updated export. JSON arrays are also supported.</p>
+      <h2>Load a GitHub Copilot export</h2>
+      <p>Choose one or more <code>part-*.json</code> or <code>part-*.ndjson</code> files from the export. JSON arrays are also supported.</p>
       <input id="fileInput" type="file" accept=".json,.ndjson,application/json" multiple hidden>
       <div class="upload-actions">
         <label class="button primary" for="fileInput">Choose export files</label>
@@ -31,6 +31,12 @@
       </div>
       <p class="hint">One record represents one user on one day. Upload every <code>part-*</code> file from an export for the complete period.</p>
     </section>
+
+    <nav class="view-tabs" role="tablist" aria-label="Dashboard views" hidden id="viewTabs">
+      <button class="view-tab" role="tab" id="tab-overview" aria-controls="view-overview" aria-selected="true" data-view="overview">Overview</button>
+      <button class="view-tab" role="tab" id="tab-people" aria-controls="view-people" aria-selected="false" data-view="people" tabindex="-1">People</button>
+      <button class="view-tab" role="tab" id="tab-coredata" aria-controls="view-coredata" aria-selected="false" data-view="coredata" tabindex="-1">Core Data</button>
+    </nav>
 
     <section id="dashboard" hidden>
       <div class="toolbar">
@@ -40,50 +46,119 @@
           <p id="reportMeta" class="muted"></p>
         </div>
         <div class="filter-set">
-          <label>Period <select id="dateFilter"><option value="all">Entire export</option><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="28">Last 28 days</option></select></label>
-          <label>User <select id="userFilter"><option value="all">Everyone</option></select></label>
+          <label>Period <select id="dateFilter"><option value="all">Entire export</option><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="28" selected>Last 28 days</option></select></label>
+          <label>Person <select id="userFilter"><option value="all">Everyone</option></select></label>
           <label>Model <select id="modelFilter"><option value="all">All models</option></select></label>
           <button id="resetFilters" class="text-button">Reset</button>
         </div>
       </div>
 
-      <div class="context-note"><span>◎</span><span><strong>Read this as adoption, not quotas.</strong> GitHub’s new activity export reports user/day totals. Model and feature charts are nested breakdowns; they should not be added together with the headline totals.</span></div>
+      <div class="context-note"><span>◎</span><span><strong>Read this as adoption, not quotas.</strong> GitHub’s activity export reports user/day totals. Model and feature charts are nested breakdowns; they should not be added together with the headline totals.</span></div>
 
-      <section class="metric-grid">
-        <article class="metric"><p>Active seats</p><strong id="activeUsers">—</strong><span id="activeUsersNote">of reported users</span></article>
-        <article class="metric"><p>Engagement</p><strong id="engagementRate">—</strong><span>reported users active in period</span></article>
-        <article class="metric"><p>Agent adoption</p><strong id="agentRate">—</strong><span id="agentNote">of active seats</span></article>
-        <article class="metric"><p>Chat adoption</p><strong id="chatRate">—</strong><span>of active seats</span></article>
-        <article class="metric"><p>Accepted changes</p><strong id="acceptedCode">—</strong><span id="acceptedNote">accepted activities</span></article>
-        <article class="metric"><p>AI credits used</p><strong id="creditsUsed">—</strong><span>reported consumption</span></article>
-        <article class="metric"><p>Dormant seats <span class="info-tip" tabindex="0" title="People reported in the current selection with zero interactions, code generation, or acceptances. Change the period filter above to check dormancy over a different window — select Entire export to find seats worth reclaiming.">ⓘ</span></p><strong id="dormantSeats">—</strong><span id="dormantNote">of reported seats</span></article>
+      <section id="view-overview" class="view" role="tabpanel" aria-labelledby="tab-overview">
+        <section class="metric-grid" id="headlineKpis">
+          <article class="metric"><p>Active people</p><strong id="kpiActive">—</strong><span id="kpiActiveNote">of reported people</span></article>
+          <article class="metric"><p>Agent-first</p><strong id="kpiAgentFirst">—</strong><span id="kpiAgentFirstNote">Phase 2–3</span></article>
+          <article class="metric"><p>Sustained use</p><strong id="kpiSustained">—</strong><span id="kpiSustainedNote">6+ active days</span></article>
+          <article class="metric"><p>Agent contribution</p><strong id="kpiAgentContribution">—</strong><span>of agent + user LoC</span></article>
+          <article class="metric" id="kpiAutoCard"><p>Reported Auto in Agent</p><strong id="kpiAuto">—</strong><span>Agent workflows</span></article>
+          <article class="metric"><p>No observed activity</p><strong id="kpiNoActivity">—</strong><span id="kpiNoActivityNote">of reported people</span></article>
+        </section>
+
+        <p class="positioning-line">GitHub tells you how Copilot is being used across your organisation. Copilot Signals shows you how adoption differs between your people.</p>
+
+        <section class="card wide" id="adoptionDepthCard">
+          <div class="card-heading"><div><p class="eyebrow">ADOPTION DEPTH</p><h3>Latest reported phase per person</h3></div></div>
+          <div id="adoptionDepthBars" class="depth-bars"></div>
+          <p id="adoptionDepthMovement" class="muted"></p>
+        </section>
+
+        <section class="card wide" id="agentDistributionCard">
+          <div class="card-heading"><div><p class="eyebrow">AGENT-FIRST DEVELOPMENT</p><h3>Overall agent contribution: <span id="agentDistributionOverall">—</span></h3></div></div>
+          <div id="agentDistributionBars" class="depth-bars"></div>
+          <button class="text-button" id="viewPeopleFromAgent">View people →</button>
+        </section>
+
+        <section class="card wide" id="surfaceFunnelCard">
+          <div class="card-heading"><div><p class="eyebrow">COPILOT SURFACE ADOPTION</p><h3>People using each surface</h3></div><span class="muted">of active people</span></div>
+          <div id="surfaceFunnelBars" class="depth-bars"></div>
+        </section>
+
+        <section class="card wide" id="modelRoutingCard" hidden>
+          <div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Reported Auto versus named models</h3></div><span class="muted">GitHub may resolve Auto to the selected model; this reflects only what the export reports as <code>auto</code>.</span></div>
+          <div id="modelRoutingBars" class="depth-bars"></div>
+        </section>
+
+        <section class="card wide opportunity-grid" id="enablementCard">
+          <div>
+            <p class="eyebrow">ENABLEMENT OPPORTUNITIES</p>
+            <h4>Who might need a nudge</h4>
+            <ul class="opportunity-list" id="enablementList"></ul>
+          </div>
+          <div>
+            <h4>What each one means</h4>
+            <p class="muted" id="enablementExplainer">Click a row to open the matching people in the People view.</p>
+          </div>
+        </section>
       </section>
 
-      <section class="insight-grid">
-        <article class="insight"><p class="eyebrow">AUTO ROUTING BY MODE <span class="info-tip" tabindex="0" title="Percentage of model-attributed code generation using the Auto model within Agent or Ask mode. Features without either label are excluded.">ⓘ</span></p><h3 id="autoRate">—</h3><p id="autoNarrative">Load data to compare Auto selection in Agent and Ask mode.</p></article>
-        <article class="insight"><p class="eyebrow">ADOPTION MOMENTUM</p><h3 id="momentum">—</h3><p id="momentumNarrative">Activity trend will appear here.</p></article>
-        <article class="insight"><p class="eyebrow">LEADING GITHUB COPILOT FEATURE</p><h3 id="workflow">—</h3><p id="workflowNarrative">Feature activity will appear here.</p></article>
+      <section id="view-people" class="view" role="tabpanel" aria-labelledby="tab-people" hidden>
+        <section class="table-card">
+          <div class="card-heading">
+            <div><p class="eyebrow">PEOPLE</p><h3>People in the selected period</h3></div>
+            <div class="table-actions">
+              <div class="dim-toggle" id="peopleFilterToggle">
+                <button class="dim-btn active" data-filter="all">All</button>
+                <button class="dim-btn" data-filter="phase0">Phase 0</button>
+                <button class="dim-btn" data-filter="phase1">Phase 1</button>
+                <button class="dim-btn" data-filter="phase2">Phase 2</button>
+                <button class="dim-btn" data-filter="phase3">Phase 3</button>
+                <button class="dim-btn" data-filter="completionOnly">Completion-only</button>
+                <button class="dim-btn" data-filter="agent">Agent</button>
+                <button class="dim-btn" data-filter="cli">CLI</button>
+                <button class="dim-btn" data-filter="cloudCodingAgent">Cloud/Coding Agent</button>
+                <button class="dim-btn" data-filter="autoAbove75">Auto &gt; 75%</button>
+                <button class="dim-btn" data-filter="noActivity">No observed activity</button>
+                <button class="dim-btn" data-filter="sustained">Sustained</button>
+              </div>
+              <input id="peopleSearch" type="search" placeholder="Search people">
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th class="sortable" data-sort="name">Person <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="phase">Phase <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="consistency">Consistency <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="agentShare">Agent share <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="autoShare">Reported Auto share <span class="sort-indicator">↕</span></th>
+                <th>Surfaces</th>
+                <th class="sortable" data-sort="acceptance">Completion acceptance <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="credits">AI credits <span class="sort-indicator">↕</span></th>
+                <th class="sortable" data-sort="lastActive">Last active <span class="sort-indicator">↕</span></th>
+              </tr></thead>
+              <tbody id="peopleTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <div id="personDrawer" hidden></div>
       </section>
 
-      <section class="chart-grid">
-        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">DAILY PULSE</p><h3>Interactions and code generation</h3></div></div><canvas id="activityChart"></canvas></article>
-        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">MODEL CHOICE</p><h3>Daily routing — Auto versus named models</h3></div><span class="muted">model-attributed generation activity</span></div><canvas id="routingTrendChart"></canvas></article>
-        <article class="card"><div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Auto share by interaction mode</h3></div><span class="muted">% of generation</span></div><canvas id="modeRoutingChart"></canvas></article>
-        <article class="card"><div class="card-heading"><div><p class="eyebrow">REPEAT USE</p><h3>How often people return</h3></div><span class="muted">active days</span></div><canvas id="repeatUseChart"></canvas></article>
-        <article class="card"><div class="card-heading"><div><p class="eyebrow">BREAKDOWN</p><h3>Model, feature and language mix</h3></div><div class="dim-toggle" id="breakdownToggle"><button class="dim-btn active" data-dim="model">Model</button><button class="dim-btn" data-dim="feature">Feature</button><button class="dim-btn" data-dim="language">Language</button></div></div><div class="breakdown-scroll"><div id="breakdownInner"><canvas id="breakdownChart"></canvas></div></div></article>
-        <article class="card"><div class="card-heading"><div><p class="eyebrow">ENVIRONMENTS</p><h3>IDE activity</h3></div></div><canvas id="ideChart"></canvas></article>
-        <article class="card"><div class="card-heading"><div><p class="eyebrow">PRODUCT SURFACES</p><h3>People using each surface</h3></div></div><canvas id="surfaceChart"></canvas></article>
-        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">CODE CHANGES</p><h3>Agent-initiated vs user-initiated changes, by person <span class="info-tip" tabindex="0" title="Total lines added and deleted, attributed from GitHub's feature labels. Agent-initiated includes agent, edit, and custom modes; user-initiated includes code completion and non-agent chat actions.">ⓘ</span></h3></div><span class="muted" id="agentContributionNote"></span></div><canvas id="locChart"></canvas></article>
-        <article class="card wide"><div class="card-heading"><div><p class="eyebrow">ADOPTION</p><h3>Most active people</h3></div><span class="muted">by interactions</span></div><canvas id="peopleChart"></canvas></article>
-      </section>
-
-      <section class="table-card">
-        <div class="card-heading"><div><p class="eyebrow">SEAT DETAIL</p><h3>People in the selected period</h3></div><div class="table-actions"><div class="dim-toggle" id="seatFilterToggle"><button class="dim-btn active" data-seat="all">All</button><button class="dim-btn" data-seat="active">Active</button><button class="dim-btn" data-seat="dormant">Dormant</button></div><input id="tableSearch" type="search" placeholder="Search people"></div></div>
-        <div class="table-wrap"><table><thead><tr><th class="sortable" data-sort="name">Person <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="days">Active days <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="idleDays">Last active <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="interactions">Interactions <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="generation">Generated <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="accepted">Accepted <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="acceptRate">Completion accept rate <span class="info-tip" tabindex="0" title="Accepted inline code completions divided by shown inline code completions. Chat and agent activity are excluded.">ⓘ</span> <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="completion">Code completion <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="agent">Agent <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="chat">Chat <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="cli">CLI <span class="sort-indicator">↕</span></th><th class="sortable" data-sort="credits">Credits <span class="sort-indicator">↕</span></th></tr></thead><tbody id="peopleTable"></tbody></table></div>
+      <section id="view-coredata" class="view" role="tabpanel" aria-labelledby="tab-coredata" hidden>
+        <section class="chart-grid">
+          <article class="card wide"><div class="card-heading"><div><p class="eyebrow">DAILY PULSE</p><h3>Interactions and code generation</h3></div></div><canvas id="activityChart"></canvas></article>
+          <article class="card wide"><div class="card-heading"><div><p class="eyebrow">MODEL CHOICE</p><h3>Daily routing — Auto versus named models</h3></div><span class="muted">model-attributed generation activity</span></div><canvas id="routingTrendChart"></canvas></article>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">MODEL ROUTING</p><h3>Auto share by interaction mode</h3></div><span class="muted">% of generation</span></div><canvas id="modeRoutingChart"></canvas></article>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">REPEAT USE</p><h3>How often people return</h3></div><span class="muted">active days</span></div><canvas id="repeatUseChart"></canvas></article>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">BREAKDOWN</p><h3>Model, feature and language mix</h3></div><div class="dim-toggle" id="breakdownToggle"><button class="dim-btn active" data-dim="model">Model</button><button class="dim-btn" data-dim="feature">Feature</button><button class="dim-btn" data-dim="language">Language</button></div></div><div class="breakdown-scroll"><div id="breakdownInner"><canvas id="breakdownChart"></canvas></div></div></article>
+          <article class="card"><div class="card-heading"><div><p class="eyebrow">ENVIRONMENTS</p><h3>IDE activity</h3></div></div><canvas id="ideChart"></canvas></article>
+          <article class="card wide"><div class="card-heading"><div><p class="eyebrow">CODE CHANGES</p><h3>Agent-initiated vs user-initiated changes, by person <span class="info-tip" tabindex="0" title="Total lines added and deleted, attributed from GitHub's feature labels. Agent-initiated includes agent, edit, and custom modes; user-initiated includes code completion and non-agent chat actions.">ⓘ</span></h3></div><span class="muted" id="agentContributionNote"></span></div><canvas id="locChart"></canvas></article>
+          <article class="card wide"><div class="card-heading"><div><p class="eyebrow">ADOPTION</p><h3>Most active people</h3></div><span class="muted">by interactions</span></div><canvas id="peopleChart"></canvas></article>
+        </section>
       </section>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="script.js"></script>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>
