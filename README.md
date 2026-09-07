@@ -1,45 +1,37 @@
-# GitHub Copilot Signals Dashboard
+# GitHub Copilot Signals
 
-A private, browser-based analytics viewer for GitHub Copilot usage exports. It turns user-level activity data into adoption, workflow, model-routing, and code-generation signals—without sending the export to a server.
+Turn GitHub's raw Copilot usage export into user-level adoption and agentic-engineering insights — entirely in your browser.
 
-It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub’s current Copilot usage metrics export.
+**GitHub tells you how Copilot is being used across your organisation. Copilot Signals shows you how adoption differs between your people.**
 
-## What this product is
+It accepts the `part-*.json` / `part-*.ndjson` files produced by GitHub's Copilot usage metrics export and never sends them anywhere — parsing and analytics run entirely client-side.
 
-This is not a Premium Requests or monthly-quota tracker. It is a self-service companion dashboard for exploring Copilot usage and adoption data at a person, model, feature, and product-surface level.
+## Why this exists alongside GitHub's own dashboards
 
-Use it to understand questions such as:
+GitHub's aggregate Copilot dashboards answer "how much is Copilot used, org-wide." They don't easily answer "which of my people have moved past code completion into agent-first development, and who needs help getting there." Copilot Signals is a companion to those dashboards, not a replacement — it takes the same per-user export data and turns it into person-level adoption depth, agent contribution, and a punch list of enablement opportunities.
 
-- Is Copilot adoption broad and sustained, or concentrated among a few people?
-- How much activity is routed through Auto versus named models?
-- Which Copilot surfaces and workflows are actually being used?
-- How do agent-initiated and user-initiated code changes compare?
+## The three views
 
-## What it shows
+- **Overview** — the leadership view. Headline adoption KPIs, adoption depth (GitHub's own `ai_adoption_phase` cohorts, aggregated), agent-contribution distribution, a Copilot surface adoption funnel, reported Auto-vs-named model routing, and clickable enablement opportunities.
+- **People** — the operational view. A searchable, filterable, sortable table of every reported person with phase, consistency, agent share, reported Auto share, surfaces, completion acceptance, credits and last-active date. Selecting a person opens a detail drawer with their full adoption profile.
+- **Core Data** — the existing raw-telemetry exploration window: daily activity, model/feature/language breakdowns, IDE mix, and per-person agent vs. user LoC. Kept because exploring the raw export is still useful on its own.
 
-- Seat engagement: reported vs active people, chat and agent adoption
-- Daily interactions and code-generation activity
-- Model routing, including **Auto vs named model** totals and a day-by-day comparison
-- Auto-routing share by Agent and Ask mode, plus repeat-use segments
-- Product-surface adoption across chat, agent, CLI, coding agent, cloud agent, and the Copilot app
-- Feature, language and IDE activity, in a single dimension-toggled breakdown panel
-- Agent-initiated vs user-initiated code changes per person — split using the same agent/edit/custom-mode definition GitHub's own dashboard uses for "Agent Contribution", but broken out by person instead of only as an org-wide number
-- Inline-completion acceptance rate, per person
-- Accepted activity, lines added, and reported AI credit use
-- A per-person table for the selected period
+## Reported people, not licensed seats
 
-The dashboard deliberately does not present the export as monthly quota data. Its top-level totals are user/day activity, while the feature/model/language values are nested breakdowns; summing them across categories would double-count.
+The export tells you who showed up in the activity report, not who holds a license — GitHub's seat/license data is a separate resource with its own API. Copilot Signals only ever reports **reported people**, **active people**, and **no observed activity** — never "seats," "dormant seats," or "reclaim candidates." A future seat-assignment upload could legitimately add that language; today's export can't support it.
+
+## Reported Auto is a lower bound, not a full picture
+
+GitHub's `auto` model routing entry reflects only what the export reports as `auto` — GitHub may resolve Auto activity to a specific model behind the scenes, and that resolution doesn't necessarily show up as `auto` in every export. Anywhere this app shows an Auto-related figure, it's the reported share, and Auto-related UI shows "Not reported" rather than 0% when an export has no `auto` bucket at all.
 
 ## Use it
 
 1. Open the site (GitHub Pages or a local static server).
-2. Select every `part-*` file from a single GitHub GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
-3. Use the period, person and model filters to explore the data.
+2. Select every `part-*` file from a single GitHub Copilot export. NDJSON, JSON arrays, and `.json` files are supported.
+3. Use the period, person and model filters to explore Overview, People and Core Data.
 
-All parsing and analytics happen locally in the browser; uploaded exports are not sent anywhere.
-
-The included `data_example.json` is a fully anonymised, 2,109-record activity-export sample and can be loaded with **Explore included sample**. It contains no original user, organisation, or enterprise identifiers.
+The included `data_example.json` is a fully anonymised, 2,109-record activity-export sample in the per-user metrics shape, with identifying and partition metadata removed and records wrapped in a JSON array. Load it with **Explore included sample**.
 
 ## Technical notes
 
-This is a static site built with vanilla JavaScript and Chart.js. It needs no build step or backend. GitHub’s export schema can add fields over time; the viewer uses the stable top-level activity fields and the supplied nested totals (`totals_by_*`) when available.
+This is a static site built with vanilla JavaScript ES modules and Chart.js — no build step, no backend, no runtime framework. The metrics engine (`src/metrics.js`) is pure and covered by `node --test`; run `npm test` to check it. GitHub's export schema can add fields over time; the viewer uses the stable top-level activity fields, GitHub's `ai_adoption_phase` cohort, and the supplied nested `totals_by_*` breakdowns when available.
